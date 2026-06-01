@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../models/product_model.dart';
 
 class DetailPage extends StatelessWidget {
-  const DetailPage({super.key});
+  final Product product;
+  
+  const DetailPage({super.key, required this.product});
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +30,12 @@ class DetailPage extends StatelessWidget {
                 Container(
                   height: 300,
                   width: double.infinity,
-                  color: Colors.grey[300], // Ganti dengan Image.asset nanti
-                  child: const Center(child: Icon(Icons.image, size: 50, color: Colors.white)),
+                  color: Colors.grey[300],
+                  child: Image.asset(
+                    product.imagePath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.image, size: 50, color: Colors.white)),
+                  ),
                 ),
                 Positioned(
                   bottom: 16,
@@ -49,14 +56,14 @@ class DetailPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("BOOKS", style: TextStyle(color: Color(0xFFBC8E52), fontWeight: FontWeight.bold)),
-                      const Text("Uploaded 2h ago", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(product.category, style: const TextStyle(color: Color(0xFFBC8E52), fontWeight: FontWeight.bold)),
+                      Text("Uploaded ${product.time}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text("Calculus Vol. 1", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(product.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  const Text("Rp 120.000", style: TextStyle(fontSize: 22, color: Color(0xFFBC8E52), fontWeight: FontWeight.bold)),
+                  Text(product.price, style: const TextStyle(fontSize: 22, color: Color(0xFFBC8E52), fontWeight: FontWeight.bold)),
                   const Divider(height: 40),
                   const Text("Description", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
