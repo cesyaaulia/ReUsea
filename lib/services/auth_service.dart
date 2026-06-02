@@ -11,6 +11,7 @@ class AuthService {
 
   // 1. REGISTER dengan Validasi Domain Email UNESA
   Future<void> registerWithEmail({
+    required String name,
     required String email,
     required String password,
     required Function() onSuccess,
@@ -59,6 +60,15 @@ class AuthService {
       onError(_handleAuthError(e));
     } catch (e) {
       onError('Terjadi kesalahan: $e');
+    }
+  }
+
+  // Reset Password
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } catch (e) {
+      throw 'Gagal mengirim email reset: ${e.toString()}';
     }
   }
 
