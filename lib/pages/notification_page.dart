@@ -26,9 +26,9 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F4), // Tema krem figma ReUsea
+      backgroundColor: const Color(0xFFF2F1EE), // Tema krem figma ReUsea baru
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F1EE),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -57,7 +57,7 @@ class _NotificationPageState extends State<NotificationPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFBC8E52)),
+              child: CircularProgressIndicator(color: Color(0xFF1A2235)),
             );
           }
 
@@ -98,12 +98,12 @@ class _NotificationPageState extends State<NotificationPage> {
                     icon: const Icon(
                       Icons.done_all,
                       size: 18,
-                      color: Color(0xFFBC8E52),
+                      color: Color(0xFF1A2235),
                     ),
                     label: const Text(
                       "Tandai Semua Dibaca",
                       style: TextStyle(
-                        color: Color(0xFFBC8E52),
+                        color: Color(0xFF1A2235),
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -124,16 +124,12 @@ class _NotificationPageState extends State<NotificationPage> {
                       decoration: BoxDecoration(
                         color: isRead
                             ? Colors.white
-                            : const Color(
-                                0xFFFFFDF9,
-                              ), // Warna agak kuning soft jika unread
+                            : const Color(0xFF1A2235).withValues(alpha: 0.05), // Warna navy soft jika unread
                         borderRadius: BorderRadius.circular(12),
                         border: isRead
                             ? null
                             : Border.all(
-                                color: const Color(
-                                  0xFFBC8E52,
-                                ).withValues(alpha: 0.2),
+                                color: const Color(0xFF1A2235).withValues(alpha: 0.2),
                                 width: 1.5,
                               ),
                         boxShadow: [
@@ -149,13 +145,13 @@ class _NotificationPageState extends State<NotificationPage> {
                         leading: CircleAvatar(
                           backgroundColor: isRead
                               ? const Color(0xFFF1F5F9)
-                              : const Color(0xFFFDEEDC),
+                              : const Color(0xFF1A2235).withValues(alpha: 0.1),
                           child: Icon(
                             data['title'].toString().contains('🎉') ||
                                     data['title'].toString().contains('Terjual')
                                 ? Icons.shopping_bag_outlined
                                 : Icons.campaign_outlined,
-                            color: const Color(0xFFBC8E52),
+                            color: const Color(0xFF1A2235),
                           ),
                         ),
                         title: Text(

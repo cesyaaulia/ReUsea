@@ -61,7 +61,7 @@ class _MainNavigationState extends State<MainNavigation> {
             SlideUpRoute(page: const SellItemPage()),
           );
         },
-        backgroundColor: const Color(0xFF7BA699),
+        backgroundColor: const Color(0xFF1A2235),
         elevation: 2,
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Colors.white, size: 30),
@@ -108,7 +108,7 @@ class _MainNavigationState extends State<MainNavigation> {
     int index,
   ) {
     bool isSelected = _selectedIndex == index;
-    Color activeColor = const Color(0xFFBC8E52); // Warna emas/cokelat ReUsea
+    Color activeColor = const Color(0xFF1A2235); // Warna navy premium ReUsea
 
     return InkWell(
       onTap: () => setState(() {

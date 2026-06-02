@@ -137,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFBC8E52),
+              backgroundColor: const Color(0xFF1A2235),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -152,112 +152,115 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F1EE),
       body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 30),
-          child: Column(
-            children: [
-              const SizedBox(height: 60),
-              const Text(
-                "Login",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(height: 40),
-              const CircleAvatar(
-                radius: 50,
-                backgroundColor: Color(0xFFE9E2D7),
-                child: Icon(Icons.school, size: 50, color: Color(0xFFBC8E52)),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                "Welcome back!",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              const Text(
-                "Login with your official UNESA account",
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 40),
-              _buildTextField(
-                "UNESA Email",
-                "student@mhs.unesa.ac.id",
-                Icons.email_outlined,
-                _emailController,
-              ),
-              const SizedBox(height: 20),
-              _buildTextField(
-                "Password",
-                "********",
-                Icons.lock_outline,
-                _passwordController,
-                isPassword: true,
-              ),
-
-              // ========================================================
-              // SISIPAN TOMBOL TEXT FORGOT PASSWORD (PAS SESUAI DESAIN)
-              // ========================================================
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  onTap: _showForgotPasswordDialog,
-                  child: const Text(
-                    "Forgot Password?",
-                    style: TextStyle(
-                      color: Color(0xFFBC8E52),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 450),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              children: [
+                const SizedBox(height: 60),
+                const Text(
+                  "Login",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
-              ),
-              const SizedBox(height: 25), // Jarak seimbang menuju button login
-
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFBC8E52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          "Login",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                const SizedBox(height: 40),
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: const Color(0xFF1A2235).withValues(alpha: 0.15),
+                  child: const Icon(Icons.school, size: 50, color: Color(0xFF1A2235)),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Don't have an account? "),
-                  GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      SlideRightRoute(page: const RegisterPage()),
-                    ),
+                const SizedBox(height: 24),
+                const Text(
+                  "Welcome back!",
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                const Text(
+                  "Login with your official UNESA account",
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 40),
+                _buildTextField(
+                  "UNESA Email",
+                  "student@mhs.unesa.ac.id",
+                  Icons.email_outlined,
+                  _emailController,
+                ),
+                const SizedBox(height: 20),
+                _buildTextField(
+                  "Password",
+                  "********",
+                  Icons.lock_outline,
+                  _passwordController,
+                  isPassword: true,
+                ),
+
+                // ========================================================
+                // SISIPAN TOMBOL TEXT FORGOT PASSWORD (PAS SESUAI DESAIN)
+                // ========================================================
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _showForgotPasswordDialog,
                     child: const Text(
-                      "Register",
+                      "Forgot Password?",
                       style: TextStyle(
-                        color: Color(0xFFBC8E52),
+                        color: Color(0xFF1A2235),
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 25), // Jarak seimbang menuju button login
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A2235),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Login",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Don't have an account? "),
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        SlideRightRoute(page: const RegisterPage()),
+                      ),
+                      child: const Text(
+                        "Register",
+                        style: TextStyle(
+                          color: Color(0xFF1A2235),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -283,9 +286,21 @@ class _LoginPageState extends State<LoginPage> {
           controller: controller,
           obscureText: isPassword,
           decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
             hintText: hint,
-            prefixIcon: Icon(icon),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            prefixIcon: Icon(icon, color: const Color(0xFF546E76)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF1A2235), width: 1.5),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             contentPadding: const EdgeInsets.symmetric(vertical: 15),
           ),
         ),

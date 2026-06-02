@@ -65,9 +65,9 @@ class _MyItemsPageState extends State<MyItemsPage> {
     String currentUserId = _authService.currentUser?.uid ?? "";
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F4),
+      backgroundColor: const Color(0xFFF2F1EE),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F1EE),
         elevation: 0,
         centerTitle: true,
         title: const Text(
@@ -75,40 +75,45 @@ class _MyItemsPageState extends State<MyItemsPage> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _dbService.getProductsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _dbService.getProductsStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          var myProductsDocs =
-              snapshot.data?.docs
-                  .where((doc) => doc['sellerId'] == currentUserId)
-                  .toList() ??
-              [];
+              var myProductsDocs =
+                  snapshot.data?.docs
+                      .where((doc) => doc['sellerId'] == currentUserId)
+                      .toList() ??
+                  [];
 
-          if (myProductsDocs.isEmpty) {
-            return const Center(
-              child: Text("Belum ada barang yang Anda unggah."),
-            );
-          }
+              if (myProductsDocs.isEmpty) {
+                return const Center(
+                  child: Text("Belum ada barang yang Anda unggah."),
+                );
+              }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: myProductsDocs.length,
-            itemBuilder: (context, index) {
-              var doc = myProductsDocs[index];
-              var productData = doc.data() as Map<String, dynamic>;
-              Product product = Product.fromMap(productData);
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: myProductsDocs.length,
+                itemBuilder: (context, index) {
+                  var doc = myProductsDocs[index];
+                  var productData = doc.data() as Map<String, dynamic>;
+                  Product product = Product.fromMap(productData);
 
-              return _buildItemCard(
-                product,
-                doc.id,
-              ); // Kita kirim doc.id untuk dihapus
+                  return _buildItemCard(
+                    product,
+                    doc.id,
+                  ); // Kita kirim doc.id untuk dihapus
+                },
+              );
             },
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -152,7 +157,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
                         Text(
                           product.category,
                           style: const TextStyle(
-                            color: Color(0xFFBC8E52),
+                            color: Color(0xFF1A2235),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -196,7 +201,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
                     Text(
                       product.price,
                       style: const TextStyle(
-                        color: Color(0xFFBC8E52),
+                        color: Color(0xFF1A2235),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

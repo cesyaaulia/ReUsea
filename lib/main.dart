@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:reusea/pages/login_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:reusea/pages/login_page.dart';
+import 'package:reusea/pages/main_navigation.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -28,10 +31,34 @@ class ReUseaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF9F7F4),
+        scaffoldBackgroundColor: const Color(0xFFF2F1EE),
+        primaryColor: const Color(0xFF1A2235),
         useMaterial3: true,
+        textTheme: GoogleFonts.lexendTextTheme(
+          ThemeData.light().textTheme.apply(
+            bodyColor: const Color(0xFF0F172A),
+            displayColor: const Color(0xFF0F172A),
+          ),
+        ),
       ),
-      home: const LoginPage(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF1A2235),
+                ),
+              ),
+            );
+          }
+          if (snapshot.hasData && snapshot.data != null) {
+            return const MainNavigation();
+          }
+          return const LoginPage();
+        },
+      ),
     );
   }
 }

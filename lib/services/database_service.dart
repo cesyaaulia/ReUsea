@@ -319,7 +319,6 @@ class DatabaseService {
     return _db
         .collection('orders')
         .where('buyerId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
@@ -328,7 +327,6 @@ class DatabaseService {
     return _db
         .collection('orders')
         .where('sellerId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
@@ -342,5 +340,170 @@ class DatabaseService {
     } catch (e) {
       throw 'Gagal memperbarui status transaksi: $e';
     }
+  }
+
+  // ====================================================================
+  // 4. MANAJEMEN CHAT REAL-TIME (CHAT LOGIC)
+  // ====================================================================
+
+  /// Membuat atau mengambil room chat yang sudah ada antara pembeli dan penjual
+  Future<String> getOrCreateChatRoom({
+    required String buyerId,
+    required String buyerName,
+    required String buyerPhoto,
+    required String sellerId,
+    required String sellerName,
+    required String sellerPhoto,
+  }) async {
+    // roomId dibuat unik dengan mengurutkan UID secara alfabetis
+    String roomId = buyerId.compareTo(sellerId) < 0
+        ? '${buyerId}_$sellerId'
+        : '${sellerId}_$buyerId';
+
+    DocumentReference roomRef = _db.collection('chat_rooms').doc(roomId);
+    DocumentSnapshot doc = await roomRef.get();
+
+    if (!doc.exists) {
+      await roomRef.set({
+        'id': roomId,
+        'participants': [buyerId, sellerId],
+        'participantNames': {
+          buyerId: buyerName,
+          sellerId: sellerName,
+        },
+        'participantPhotos': {
+          buyerId: buyerPhoto,
+          sellerId: sellerPhoto,
+        },
+        'lastMessage': '',
+        'lastMessageSenderId': '',
+        'lastMessageTime': FieldValue.serverTimestamp(),
+        'unreadCount': {
+          buyerId: 0,
+          sellerId: 0,
+        },
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Update data nama & foto jikalau ada perubahan profile di user
+      await roomRef.update({
+        'participantNames.$buyerId': buyerName,
+        'participantNames.$sellerId': sellerName,
+        'participantPhotos.$buyerId': buyerPhoto,
+        'participantPhotos.$sellerId': sellerPhoto,
+      });
+    }
+    return roomId;
+  }
+
+  /// Mengirim pesan baru ke subcollection chat room
+  /// Mengunggah file (foto/video) ke Firebase Storage untuk chat room
+  Future<String> uploadChatFile({
+    required Uint8List fileBytes,
+    required String roomId,
+    required String fileName,
+  }) async {
+    try {
+      Reference ref = _storage
+          .ref()
+          .child('chats')
+          .child(roomId)
+          .child(fileName);
+      UploadTask uploadTask = ref.putData(fileBytes);
+      TaskSnapshot snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      throw 'Gagal mengunggah file ke chat: $e';
+    }
+  }
+
+  /// Mengirim pesan baru ke subcollection chat room (mendukung teks, foto, dan video)
+  Future<void> sendMessage({
+    required String roomId,
+    required String senderId,
+    required String senderName,
+    required String text,
+    String? imageUrl,
+    String? videoUrl,
+  }) async {
+    if (text.trim().isEmpty && imageUrl == null && videoUrl == null) return;
+
+    DocumentReference messageRef = _db
+        .collection('chat_rooms')
+        .doc(roomId)
+        .collection('messages')
+        .doc();
+
+    await messageRef.set({
+      'id': messageRef.id,
+      'senderId': senderId,
+      'senderName': senderName,
+      'text': text.trim(),
+      'imageUrl': imageUrl,
+      'videoUrl': videoUrl,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+    });
+
+    DocumentReference roomRef = _db.collection('chat_rooms').doc(roomId);
+    DocumentSnapshot roomSnapshot = await roomRef.get();
+    if (roomSnapshot.exists) {
+      Map<String, dynamic> data = roomSnapshot.data() as Map<String, dynamic>;
+      List<dynamic> participants = data['participants'] ?? [];
+      String receiverId = participants.firstWhere((p) => p != senderId, orElse: () => '');
+
+      String previewText = text.trim();
+      if (previewText.isEmpty) {
+        if (imageUrl != null) {
+          previewText = '📷 Foto';
+        } else if (videoUrl != null) {
+          previewText = '🎥 Video';
+        }
+      }
+
+      Map<String, dynamic> updateData = {
+        'lastMessage': previewText,
+        'lastMessageSenderId': senderId,
+        'lastMessageTime': FieldValue.serverTimestamp(),
+      };
+
+      if (receiverId.isNotEmpty) {
+        updateData['unreadCount.$receiverId'] = FieldValue.increment(1);
+      }
+
+      await roomRef.update(updateData);
+    }
+  }
+
+  /// Reset unread count untuk user di chat room tertentu
+  Future<void> resetUnreadCount({
+    required String roomId,
+    required String userId,
+  }) async {
+    try {
+      await _db.collection('chat_rooms').doc(roomId).update({
+        'unreadCount.$userId': 0,
+      });
+    } catch (e) {
+      print('Gagal reset unread count: $e');
+    }
+  }
+
+  /// Stream untuk mendapatkan semua chat room yang diikuti oleh user
+  Stream<QuerySnapshot> getChatRoomsStream(String userId) {
+    return _db
+        .collection('chat_rooms')
+        .where('participants', arrayContains: userId)
+        .snapshots();
+  }
+
+  /// Stream untuk mendapatkan pesan-pesan dalam room chat tertentu
+  Stream<QuerySnapshot> getMessagesStream(String roomId) {
+    return _db
+        .collection('chat_rooms')
+        .doc(roomId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
   }
 }

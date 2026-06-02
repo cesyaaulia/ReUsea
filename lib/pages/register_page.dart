@@ -55,87 +55,92 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F4),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 30),
-        child: Column(
-          children: [
-            const SizedBox(height: 60),
-            const Text(
-              "Register",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 30),
-            const CircleAvatar(
-              radius: 40,
-              backgroundColor: Color(0xFFE9E2D7),
-              child: Icon(Icons.school, size: 40, color: Color(0xFFBC8E52)),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              "Join ReUsea",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const Text(
-              "Please use your official UNESA email\nto verify your status.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 30),
-            _buildField(
-              "Full Name",
-              "Enter your full name",
-              Icons.person_outline,
-              _nameController,
-            ),
-            const SizedBox(height: 15),
-            _buildField(
-              "UNESA Email",
-              "student@mhs.unesa.ac.id",
-              Icons.email_outlined,
-              _emailController,
-            ),
-            const SizedBox(height: 15),
-            _buildField(
-              "Password",
-              "Create a strong password",
-              Icons.lock_outline,
-              _passwordController,
-              isPassword: true,
-            ),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleRegister,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFBC8E52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+      backgroundColor: const Color(0xFFF2F1EE),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 450),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              children: [
+                const SizedBox(height: 60),
+                const Text(
+                  "Register",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 30),
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: const Color(0xFF1A2235).withValues(alpha: 0.15),
+                  child: const Icon(Icons.school, size: 40, color: Color(0xFF1A2235)),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Join ReUsea",
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                ),
+                const Text(
+                  "Please use your official UNESA email\nto verify your status.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 30),
+                _buildField(
+                  "Full Name",
+                  "Enter your full name",
+                  Icons.person_outline,
+                  _nameController,
+                ),
+                const SizedBox(height: 15),
+                _buildField(
+                  "UNESA Email",
+                  "student@mhs.unesa.ac.id",
+                  Icons.email_outlined,
+                  _emailController,
+                ),
+                const SizedBox(height: 15),
+                _buildField(
+                  "Password",
+                  "Create a strong password",
+                  Icons.lock_outline,
+                  _passwordController,
+                  isPassword: true,
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleRegister,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A2235),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Create Account",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        "Create Account",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Already have an account? Login",
+                    style: TextStyle(color: Color(0xFF1A2235)),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Already have an account? Login",
-                style: TextStyle(color: Color(0xFFBC8E52)),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -160,10 +165,17 @@ class _RegisterPageState extends State<RegisterPage> {
             filled: true,
             fillColor: Colors.white,
             hintText: hint,
-            prefixIcon: Icon(icon),
+            prefixIcon: Icon(icon, color: const Color(0xFF546E76)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF1A2235), width: 1.5),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
             ),
           ),
         ),

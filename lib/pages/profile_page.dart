@@ -49,9 +49,9 @@ class ProfilePage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F4),
+      backgroundColor: const Color(0xFFF2F1EE),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F1EE),
         elevation: 0,
         centerTitle: true,
         title: const Text(
@@ -60,7 +60,7 @@ class ProfilePage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.black),
+            icon: const Icon(Icons.settings_outlined, color: Color(0xFF1A2235)),
             onPressed: () => Navigator.push(
               context,
               FadeScaleRoute(page: const SettingsPage()),
@@ -68,156 +68,161 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.userChanges(),
-        builder: (context, snapshot) {
-          final currentUser = snapshot.data;
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.userChanges(),
+            builder: (context, snapshot) {
+              final currentUser = snapshot.data;
 
-          String userEmail = currentUser?.email ?? "budi.21001@mhs.unesa.ac.id";
-          String userName = currentUser?.displayName ?? userEmail.split('@')[0];
-          String? photoUrl = currentUser?.photoURL;
-          String currentUserId = currentUser?.uid ?? '';
+              String userEmail = currentUser?.email ?? "budi.21001@mhs.unesa.ac.id";
+              String userName = currentUser?.displayName ?? userEmail.split('@')[0];
+              String? photoUrl = currentUser?.photoURL;
+              String currentUserId = currentUser?.uid ?? '';
 
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                Container(
-                  color: Colors.white,
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 30, top: 10),
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 55,
-                        backgroundColor: const Color(0xFFF0F0F0),
-                        backgroundImage: photoUrl != null
-                            ? NetworkImage(photoUrl)
-                            : null,
-                        child: photoUrl == null
-                            ? const Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Colors.grey,
-                              )
-                            : null,
-                      ),
-                      const SizedBox(height: 15),
-                      Text(
-                        userName,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      Text(
-                        userEmail,
-                        style: const TextStyle(
-                          color: Color(0xFFBC8E52),
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 25),
-
-                      // =========================================================
-                      // BAGIAN STATISTIK (Solds & Bought Berhasil Di-Sync Live)
-                      // =========================================================
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              return SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Container(
+                      color: const Color(0xFFF2F1EE),
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(bottom: 30, top: 10),
+                      child: Column(
                         children: [
-                          _buildSoldsStat(
-                            currentUserId,
-                          ), // Panggil fungsi Stream Solds
-                          Container(
-                            height: 30,
-                            width: 1,
-                            color: Colors.grey[200],
+                          CircleAvatar(
+                            radius: 55,
+                            backgroundColor: const Color(0xFFF0F0F0),
+                            backgroundImage: photoUrl != null
+                                ? NetworkImage(photoUrl)
+                                : null,
+                            child: photoUrl == null
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Colors.grey,
+                                  )
+                                : null,
                           ),
-                          _buildBoughtStat(
-                            currentUserId,
-                          ), // Panggil fungsi Stream Bought
+                          const SizedBox(height: 15),
+                          Text(
+                            userName,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          Text(
+                            userEmail,
+                            style: const TextStyle(
+                              color: Color(0xFF1A2235),
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 25),
+
+                          // =========================================================
+                          // BAGIAN STATISTIK (Solds & Bought Berhasil Di-Sync Live)
+                          // =========================================================
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildSoldsStat(
+                                currentUserId,
+                              ), // Panggil fungsi Stream Solds
+                              Container(
+                                height: 30,
+                                width: 1,
+                                color: Colors.grey[200],
+                              ),
+                              _buildBoughtStat(
+                                currentUserId,
+                              ), // Panggil fungsi Stream Bought
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'TRANSACTION HISTORY',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _buildMenuTile(
+                            Icons.shopping_bag_outlined,
+                            'Past Buys',
+                            'History of items you purchased',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                SlideRightRoute(
+                                  page: const PastBuysPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 10),
+
+                          _buildMenuTile(
+                            Icons.sell_outlined,
+                            'Past Sells',
+                            'Track items you have sold',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                SlideRightRoute(
+                                  page: const PastSellsPage(),
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 25),
+                          const Text(
+                            'MANAGE DATA',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMenuTile(
+                            Icons.manage_accounts_outlined,
+                            'Edit Profile Info',
+                            '',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                SlideUpRoute(
+                                  page: const EditProfilePage(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 10),
+                          _buildLogoutTile(onTap: handleLogout),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'TRANSACTION HISTORY',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      _buildMenuTile(
-                        Icons.shopping_bag_outlined,
-                        'Past Buys',
-                        'History of items you purchased',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            SlideRightRoute(
-                              page: const PastBuysPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      _buildMenuTile(
-                        Icons.sell_outlined,
-                        'Past Sells',
-                        'Track items you have sold',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            SlideRightRoute(
-                              page: const PastSellsPage(),
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 25),
-                      const Text(
-                        'MANAGE DATA',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildMenuTile(
-                        Icons.manage_accounts_outlined,
-                        'Edit Profile Info',
-                        '',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            SlideUpRoute(
-                              page: const EditProfilePage(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _buildLogoutTile(onTap: handleLogout),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -270,7 +275,7 @@ class ProfilePage extends StatelessWidget {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFFBC8E52),
+            color: Color(0xFF1A2235),
           ),
         ),
         Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
@@ -298,7 +303,7 @@ class ProfilePage extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: const Color(0xFFBC8E52)),
+        leading: Icon(icon, color: const Color(0xFF1A2235)),
         title: Text(
           title,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),

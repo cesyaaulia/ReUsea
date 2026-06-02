@@ -84,9 +84,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F4),
+      backgroundColor: const Color(0xFFF2F1EE),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F1EE),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -115,7 +115,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFBC8E52)),
+              child: CircularProgressIndicator(color: Color(0xFF1A2235)),
             )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
@@ -197,7 +197,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           width: double.infinity,
                           height: 320,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF9F7F4),
+                            color: const Color(0xFFF2F1EE),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.all(16),
@@ -211,7 +211,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                   )
                                 : const Icon(
                                     Icons.shopping_bag_outlined,
-                                    color: Color(0xFFBC8E52),
+                                    color: Color(0xFF1A2235),
                                     size: 100,
                                   ),
                           ),
@@ -238,7 +238,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           item['price'] ?? '',
                           style: const TextStyle(
                             fontSize: 22,
-                            color: Color(0xFFBC8E52),
+                            color: Color(0xFF1A2235),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -274,16 +274,16 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF9F7F4),
+                        color: const Color(0xFFF2F1EE),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
                           const CircleAvatar(
-                            backgroundColor: Color(0xFFFDEEDC),
+                            backgroundColor: Color(0xFFE2E8F0),
                             child: Icon(
                               Icons.location_on,
-                              color: Color(0xFFBC8E52),
+                              color: Color(0xFF1A2235),
                             ),
                           ),
                           const SizedBox(width: 16),

@@ -47,9 +47,9 @@ class _OtpPageState extends State<OtpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F1EE),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F1EE),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
@@ -61,7 +61,7 @@ class _OtpPageState extends State<OtpPage> {
             const Icon(
               Icons.mark_email_unread_outlined,
               size: 100,
-              color: Color(0xFFBC8E52),
+              color: Color(0xFF1A2235),
             ),
             const SizedBox(height: 30),
             const Text(
@@ -81,7 +81,7 @@ class _OtpPageState extends State<OtpPage> {
               child: ElevatedButton(
                 onPressed: _isChecking ? null : _verifyEmailStatus,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFBC8E52),
+                  backgroundColor: const Color(0xFF1A2235),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

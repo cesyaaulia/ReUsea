@@ -22,9 +22,9 @@ class _PastSellsPageState extends State<PastSellsPage> {
     final String currentUserId = user?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F4),
+      backgroundColor: const Color(0xFFF2F1EE),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F1EE),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -56,7 +56,7 @@ class _PastSellsPageState extends State<PastSellsPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFBC8E52)),
+              child: CircularProgressIndicator(color: Color(0xFF1A2235)),
             );
           }
 
@@ -80,6 +80,16 @@ class _PastSellsPageState extends State<PastSellsPage> {
             data['isMock'] = false;
             items.add(data);
           }
+
+          // Sort in memory by createdAt descending to avoid composite index requirement
+          items.sort((a, b) {
+            Timestamp? aTime = a['createdAt'] as Timestamp?;
+            Timestamp? bTime = b['createdAt'] as Timestamp?;
+            if (aTime == null && bTime == null) return 0;
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            return bTime.compareTo(aTime);
+          });
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -147,7 +157,7 @@ class _PastSellsPageState extends State<PastSellsPage> {
                 width: 90,
                 height: 90,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF9F7F4),
+                  color: const Color(0xFFF2F1EE),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
@@ -164,7 +174,7 @@ class _PastSellsPageState extends State<PastSellsPage> {
                           )
                         : const Icon(
                             Icons.shopping_bag_outlined,
-                            color: Color(0xFFBC8E52),
+                            color: Color(0xFF1A2235),
                             size: 36,
                           ),
                   ),
@@ -217,7 +227,7 @@ class _PastSellsPageState extends State<PastSellsPage> {
                       item['price'] ?? '',
                       style: const TextStyle(
                         fontSize: 16,
-                        color: Color(0xFFBC8E52),
+                        color: Color(0xFF1A2235),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

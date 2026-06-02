@@ -202,9 +202,9 @@ class _EditItemPageState extends State<EditItemPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F4),
+      backgroundColor: const Color(0xFFF2F1EE),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F1EE),
         title: const Text(
           "Edit Barang",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
@@ -274,12 +274,13 @@ class _EditItemPageState extends State<EditItemPage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
                         ),
                         child: DropdownButtonFormField<String>(
                           value: selectedCategory,
                           icon: const Icon(
                             Icons.arrow_drop_down,
-                            color: Color(0xFFBC8E52),
+                            color: Color(0xFF1A2235),
                           ),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
@@ -341,16 +342,17 @@ class _EditItemPageState extends State<EditItemPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
               ),
               child: DropdownButtonFormField<String>(
                 initialValue: selectedLocation,
                 icon: const Icon(
                   Icons.arrow_drop_down,
-                  color: Color(0xFFBC8E52),
+                  color: Color(0xFF1A2235),
                 ),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
-                  prefixIcon: Icon(Icons.location_on, color: Color(0xFFBC8E52)),
+                  prefixIcon: Icon(Icons.location_on, color: Color(0xFF1A2235)),
                 ),
                 items:
                     [
@@ -380,7 +382,7 @@ class _EditItemPageState extends State<EditItemPage> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleUpdateItem,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFBC8E52),
+                  backgroundColor: const Color(0xFF1A2235),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -428,7 +430,7 @@ class _EditItemPageState extends State<EditItemPage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFFBC8E52).withValues(alpha: 0.5),
+                  color: const Color(0xFF1A2235).withValues(alpha: 0.5),
                   width: 1.5,
                   strokeAlign: BorderSide.strokeAlignInside,
                 ),
@@ -437,13 +439,13 @@ class _EditItemPageState extends State<EditItemPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.add_photo_alternate_outlined,
-                      color: Color(0xFFBC8E52), size: 28),
+                      color: Color(0xFF1A2235), size: 28),
                   SizedBox(height: 4),
                   Text(
                     "Tambah",
                     style: TextStyle(
                       fontSize: 10,
-                      color: Color(0xFFBC8E52),
+                      color: Color(0xFF1A2235),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -467,7 +469,7 @@ class _EditItemPageState extends State<EditItemPage> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: isFirst
-                ? Border.all(color: const Color(0xFFBC8E52), width: 2)
+                ? Border.all(color: const Color(0xFF1A2235), width: 2)
                 : null,
           ),
           child: ClipRRect(
@@ -486,7 +488,7 @@ class _EditItemPageState extends State<EditItemPage> {
             right: 0,
             child: Container(
               decoration: const BoxDecoration(
-                color: Color(0xFFBC8E52),
+                color: Color(0xFF1A2235),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(10),
                   bottomRight: Radius.circular(10),
@@ -535,7 +537,7 @@ class _EditItemPageState extends State<EditItemPage> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: isFirst
-                ? Border.all(color: const Color(0xFFBC8E52), width: 2)
+                ? Border.all(color: const Color(0xFF1A2235), width: 2)
                 : null,
           ),
           child: ClipRRect(
@@ -550,7 +552,7 @@ class _EditItemPageState extends State<EditItemPage> {
             right: 0,
             child: Container(
               decoration: const BoxDecoration(
-                color: Color(0xFFBC8E52),
+                color: Color(0xFF1A2235),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(10),
                   bottomRight: Radius.circular(10),
@@ -599,11 +601,11 @@ class _EditItemPageState extends State<EditItemPage> {
           duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFBC8E52) : Colors.white,
+            color: isSelected ? const Color(0xFF1A2235) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFFBC8E52)
+                  ? const Color(0xFF1A2235)
                   : Colors.grey.shade300,
             ),
           ),
@@ -613,7 +615,7 @@ class _EditItemPageState extends State<EditItemPage> {
               Icon(
                 icon,
                 size: 20,
-                color: isSelected ? Colors.white : const Color(0xFFBC8E52),
+                color: isSelected ? Colors.white : const Color(0xFF1A2235),
               ),
               const SizedBox(width: 8),
               Text(
@@ -654,9 +656,16 @@ class _EditItemPageState extends State<EditItemPage> {
         hintText: hint,
         filled: true,
         fillColor: Colors.white,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF1A2235), width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
         ),
       ),
     );

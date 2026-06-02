@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F7F4), // Warna krem background figma
+      backgroundColor: const Color(0xFFF2F1EE), // Warna krem background figma baru
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -31,7 +31,7 @@ class _HomePageState extends State<HomePage> {
         title: const Text(
           'ReUsea',
           style: TextStyle(
-            color: Color(0xFFBC8E52),
+            color: Color(0xFF1A2235),
             fontWeight: FontWeight.bold,
             fontSize: 22,
           ),
@@ -162,7 +162,7 @@ class _HomePageState extends State<HomePage> {
         margin: const EdgeInsets.only(right: 10),
         child: Chip(
           label: Text(label),
-          backgroundColor: isSelected ? const Color(0xFFBC8E52) : Colors.white,
+          backgroundColor: isSelected ? const Color(0xFF1A2235) : Colors.white,
           labelStyle: TextStyle(
             color: isSelected ? Colors.white : Colors.black,
             fontWeight: FontWeight.bold,
@@ -208,7 +208,7 @@ class _HomePageState extends State<HomePage> {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(40.0),
-              child: CircularProgressIndicator(color: Color(0xFFBC8E52)),
+              child: CircularProgressIndicator(color: Color(0xFF1A2235)),
             ),
           );
         }
@@ -337,7 +337,7 @@ class _HomePageState extends State<HomePage> {
                           Text(
                             product.category,
                             style: const TextStyle(
-                              color: Color(0xFFBC8E52),
+                              color: Color(0xFF1A2235),
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),

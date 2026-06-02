@@ -136,9 +136,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final currentUser = _auth.currentUser;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F1EE),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F1EE),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -172,7 +172,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: const Color(0xFFF9F7F4),
+                          color: const Color(0xFFF2F1EE),
                           width: 5,
                         ),
                       ),
@@ -203,7 +203,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: const Text(
                   'Change Profile Picture',
                   style: TextStyle(
-                    color: Color(0xFFBC8E52),
+                    color: Color(0xFF1A2235),
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -232,7 +232,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         borderSide: BorderSide(color: Color(0xFFEEEEEE)),
                       ),
                       focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFFBC8E52)),
+                        borderSide: BorderSide(color: Color(0xFF1A2235)),
                       ),
                     ),
                   ),
@@ -278,7 +278,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveChanges,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFBC8E52),
+                    backgroundColor: const Color(0xFF1A2235),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -309,9 +309,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: const Color(0xFFF9F7F4),
+                    backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade300),
                     ),
                   ),
                   child: const Text(
