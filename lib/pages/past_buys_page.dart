@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:reusea/services/database_service.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import 'order_detail_page.dart';
 
 class PastBuysPage extends StatefulWidget {
@@ -132,8 +133,8 @@ class _PastBuysPageState extends State<PastBuysPage> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => OrderDetailPage(orderData: item),
+            SlideFadeRightRoute(
+              page: OrderDetailPage(orderData: item),
             ),
           );
         },

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import Auth untuk tahu siapa pembelinya
-import 'package:reusea/services/database_service.dart'; // Import DatabaseService
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:reusea/services/database_service.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import '../models/product_model.dart';
-import 'past_buys_page.dart'; // Import halaman Past Buys agar bisa berpindah setelah beli
+import 'past_buys_page.dart';
 
 class DetailPage extends StatefulWidget {
   final Product product;
@@ -18,6 +19,24 @@ class _DetailPageState extends State<DetailPage> {
   final DatabaseService _dbService = DatabaseService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isBuying = false;
+
+  // =============================================
+  // IMAGE CAROUSEL STATE
+  // =============================================
+  int _currentImageIndex = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   // FUNGSI PROSES PEMBELIAN BARANG
   void _handleBuyItem() {
@@ -85,8 +104,8 @@ class _DetailPageState extends State<DetailPage> {
                   // Tendang uploader langsung ke halaman PastBuysPage untuk melacak status pesanan
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const PastBuysPage(),
+                    SlideFadeRightRoute(
+                      page: const PastBuysPage(),
                     ),
                   );
                 },
@@ -116,6 +135,10 @@ class _DetailPageState extends State<DetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Ambil list semua foto produk
+    final List<String> imageUrls = widget.product.imageUrls;
+    final int totalImages = imageUrls.isNotEmpty ? imageUrls.length : 1;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -126,7 +149,7 @@ class _DetailPageState extends State<DetailPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Item Detail",
+          "Detail Barang",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -139,32 +162,69 @@ class _DetailPageState extends State<DetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Gambar Produk (Square 1:1)
+                  // =============================================
+                  // IMAGE CAROUSEL (Swipe ala Shopee)
+                  // =============================================
                   Stack(
                     children: [
                       AspectRatio(
                         aspectRatio: 1,
-                        child: Container(
-                          color: const Color(0xFFF9F7F4),
-                          child: widget.product.imagePath.startsWith('http')
-                              ? Image.network(
-                                  widget.product.imagePath,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Center(
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          size: 50,
-                                          color: Colors.grey,
+                        child: imageUrls.isNotEmpty
+                            ? PageView.builder(
+                                controller: _pageController,
+                                itemCount: totalImages,
+                                onPageChanged: (index) {
+                                  setState(() {
+                                    _currentImageIndex = index;
+                                  });
+                                },
+                                itemBuilder: (context, index) {
+                                  String url = imageUrls[index];
+                                  return Container(
+                                    color: const Color(0xFFF9F7F4),
+                                    child: url.startsWith('http')
+                                        ? Image.network(
+                                            url,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (c, e, s) =>
+                                                const Center(
+                                              child: Icon(
+                                                Icons.broken_image,
+                                                size: 50,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          )
+                                        : Image.asset(
+                                            'assets/images/profile_placeholder.png',
+                                            fit: BoxFit.cover,
+                                          ),
+                                  );
+                                },
+                              )
+                            : Container(
+                                color: const Color(0xFFF9F7F4),
+                                child: widget.product.imagePath
+                                        .startsWith('http')
+                                    ? Image.network(
+                                        widget.product.imagePath,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (c, e, s) =>
+                                            const Center(
+                                          child: Icon(
+                                            Icons.broken_image,
+                                            size: 50,
+                                            color: Colors.grey,
+                                          ),
                                         ),
+                                      )
+                                    : Image.asset(
+                                        'assets/images/profile_placeholder.png',
+                                        fit: BoxFit.cover,
                                       ),
-                                )
-                              : Image.asset(
-                                  'assets/images/profile_placeholder.png',
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
+                              ),
                       ),
+                      // Counter badge (1/3, 2/3, etc.)
                       Positioned(
                         bottom: 16,
                         right: 16,
@@ -177,14 +237,45 @@ class _DetailPageState extends State<DetailPage> {
                             color: Colors.black54,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
-                            "1/1",
-                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          child: Text(
+                            "${_currentImageIndex + 1}/$totalImages",
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 12),
                           ),
                         ),
                       ),
+                      // Dot indicators
+                      if (totalImages > 1)
+                        Positioned(
+                          bottom: 16,
+                          left: 0,
+                          right: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(totalImages, (index) {
+                              bool isActive = index == _currentImageIndex;
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 3),
+                                width: isActive ? 24 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? const Color(0xFFBC8E52)
+                                      : Colors.white.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
                     ],
                   ),
+
+                  // =============================================
+                  // DETAIL INFO
+                  // =============================================
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -193,12 +284,43 @@ class _DetailPageState extends State<DetailPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              widget.product.category,
-                              style: const TextStyle(
-                                color: Color(0xFFBC8E52),
-                                fontWeight: FontWeight.bold,
-                              ),
+                            // Kategori + Kondisi
+                            Row(
+                              children: [
+                                Text(
+                                  widget.product.category,
+                                  style: const TextStyle(
+                                    color: Color(0xFFBC8E52),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Badge kondisi barang
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        widget.product.condition == 'Baru'
+                                            ? const Color(0xFFE8F5E9)
+                                            : const Color(0xFFFFF3E0),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    widget.product.condition,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          widget.product.condition == 'Baru'
+                                              ? const Color(0xFF2E7D32)
+                                              : const Color(0xFFE65100),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             Text(
                               "Uploaded ${widget.product.time}",
@@ -229,7 +351,7 @@ class _DetailPageState extends State<DetailPage> {
                         const Divider(height: 40),
 
                         const Text(
-                          "Description",
+                          "Deskripsi",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -246,7 +368,7 @@ class _DetailPageState extends State<DetailPage> {
                         const SizedBox(height: 30),
 
                         const Text(
-                          "Pickup Location",
+                          "Lokasi Pengambilan",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -298,7 +420,7 @@ class _DetailPageState extends State<DetailPage> {
                         const SizedBox(height: 30),
 
                         const Text(
-                          "Seller Information",
+                          "Informasi Penjual",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -416,7 +538,6 @@ class _DetailPageState extends State<DetailPage> {
             const SizedBox(width: 15),
             Expanded(
               child: ElevatedButton(
-                // --- HUBUNGKAN TOMBOL KONDISIONAL KE FUNGSI BELI ---
                 onPressed: _handleBuyItem,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFBC8E52),
@@ -426,7 +547,7 @@ class _DetailPageState extends State<DetailPage> {
                   ),
                 ),
                 child: const Text(
-                  "Buy Now",
+                  "Beli Sekarang",
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

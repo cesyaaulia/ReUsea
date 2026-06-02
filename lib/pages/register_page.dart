@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:reusea/services/auth_service.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import 'otp_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -36,7 +37,7 @@ class _RegisterPageState extends State<RegisterPage> {
         // Jika sukses membuat akun dan mengirim email link, pindah ke halaman verifikasi
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const OtpPage()),
+          SlideUpRoute(page: const OtpPage()),
         );
       },
       onError: (errorMessage) {

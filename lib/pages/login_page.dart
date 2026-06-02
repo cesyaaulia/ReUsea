@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:reusea/services/auth_service.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import 'register_page.dart';
 import 'main_navigation.dart';
 
@@ -37,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
         // Berhasil login, arahkan ke navigasi utama
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
+          ElegantFadeRoute(page: const MainNavigation()),
         );
       },
       onError: (errorMessage) {
@@ -244,9 +245,7 @@ class _LoginPageState extends State<LoginPage> {
                   GestureDetector(
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const RegisterPage(),
-                      ),
+                      SlideRightRoute(page: const RegisterPage()),
                     ),
                     child: const Text(
                       "Register",

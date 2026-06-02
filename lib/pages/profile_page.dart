@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Wajib import Firestore untuk menghitung data
 import 'package:reusea/services/auth_service.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import 'settings_page.dart';
 import 'edit_profile_page.dart';
 import 'login_page.dart';
@@ -35,7 +36,7 @@ class ProfilePage extends StatelessWidget {
                 await authService.logout();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                    ElegantFadeRoute(page: const LoginPage()),
                     (route) => false,
                   );
                 }
@@ -62,7 +63,7 @@ class ProfilePage extends StatelessWidget {
             icon: const Icon(Icons.settings_outlined, color: Colors.black),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SettingsPage()),
+              FadeScaleRoute(page: const SettingsPage()),
             ),
           ),
         ],
@@ -163,8 +164,8 @@ class ProfilePage extends StatelessWidget {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => const PastBuysPage(),
+                            SlideRightRoute(
+                              page: const PastBuysPage(),
                             ),
                           );
                         },
@@ -178,8 +179,8 @@ class ProfilePage extends StatelessWidget {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => const PastSellsPage(),
+                            SlideRightRoute(
+                              page: const PastSellsPage(),
                             ),
                           );
                         },
@@ -202,8 +203,8 @@ class ProfilePage extends StatelessWidget {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => const EditProfilePage(),
+                            SlideUpRoute(
+                              page: const EditProfilePage(),
                             ),
                           );
                         },

@@ -46,19 +46,41 @@ class DatabaseService {
   // 2. MANAJEMEN PRODUK KAMPUS (PRODUCT LOGIC)
   // ====================================================================
 
-  /// Mengunggah gambar dagangan ke Firebase Storage dalam bentuk format byte
+  /// Mengunggah satu gambar dagangan ke Firebase Storage dalam bentuk format byte
   Future<String> uploadProductImage(
     Uint8List imageBytes,
-    String productId,
-  ) async {
+    String productId, {
+    int index = 0,
+  }) async {
     try {
-      Reference ref = _storage.ref().child('products').child('$productId.jpg');
+      // Setiap foto diberi nama unik berdasarkan productId dan index
+      Reference ref = _storage
+          .ref()
+          .child('products')
+          .child('${productId}_$index.jpg');
       UploadTask uploadTask = ref.putData(imageBytes);
       TaskSnapshot snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
       throw 'Gagal mengunggah foto produk: $e';
     }
+  }
+
+  /// Mengunggah multiple gambar produk dan mengembalikan list URL
+  Future<List<String>> uploadProductImages(
+    List<Uint8List> imageBytesList,
+    String productId,
+  ) async {
+    List<String> urls = [];
+    for (int i = 0; i < imageBytesList.length; i++) {
+      String url = await uploadProductImage(
+        imageBytesList[i],
+        productId,
+        index: i,
+      );
+      urls.add(url);
+    }
+    return urls;
   }
 
   /// Mengunggah item dagangan baru ke Firestore beserta trigger notifikasi global
@@ -69,16 +91,26 @@ class DatabaseService {
     required String description,
     required String location,
     required String sellerId,
-    required Uint8List? imageBytes,
+    required String condition,
+    required List<Uint8List>? imageBytesList,
+    // Legacy support: masih terima imageBytes tunggal
+    Uint8List? imageBytes,
     required Function() onSuccess,
     required Function(String) onError,
   }) async {
     try {
       DocumentReference docRef = _db.collection('products').doc();
-      String imageUrl = 'assets/images/profile_placeholder.png';
+      List<String> imageUrls = [];
+      String mainImageUrl = 'assets/images/profile_placeholder.png';
 
-      if (imageBytes != null) {
-        imageUrl = await uploadProductImage(imageBytes, docRef.id);
+      // Upload multi-foto jika ada
+      if (imageBytesList != null && imageBytesList.isNotEmpty) {
+        imageUrls = await uploadProductImages(imageBytesList, docRef.id);
+        mainImageUrl = imageUrls.first;
+      } else if (imageBytes != null) {
+        // Fallback: single image (backward-compatible)
+        mainImageUrl = await uploadProductImage(imageBytes, docRef.id);
+        imageUrls = [mainImageUrl];
       }
 
       // Tarik info nama & foto profil asli uploader dari sistem login Auth
@@ -94,10 +126,12 @@ class DatabaseService {
         'category': category.toUpperCase(),
         'description': description,
         'location': location,
+        'condition': condition,
         'sellerId': sellerId,
         'sellerName': sellerName,
         'sellerPhoto': sellerPhoto,
-        'imagePath': imageUrl,
+        'imagePath': mainImageUrl, // Backward-compatible: foto utama
+        'imageUrls': imageUrls, // Array semua foto produk
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -123,16 +157,38 @@ class DatabaseService {
     required String category,
     required String description,
     required String location,
-    required Uint8List? newImageBytes,
-    required String existingImageUrl,
+    required String condition,
+    required List<Uint8List>? newImageBytesList,
+    required List<String> existingImageUrls,
+    // Legacy support
+    Uint8List? newImageBytes,
+    String? existingImageUrl,
     required Function() onSuccess,
     required Function(String) onError,
   }) async {
     try {
-      String finalImageUrl = existingImageUrl;
-      if (newImageBytes != null) {
-        finalImageUrl = await uploadProductImage(newImageBytes, productId);
+      List<String> finalImageUrls = List<String>.from(existingImageUrls);
+
+      // Upload foto baru (jika ada) dan append ke list
+      if (newImageBytesList != null && newImageBytesList.isNotEmpty) {
+        int startIndex = finalImageUrls.length;
+        for (int i = 0; i < newImageBytesList.length; i++) {
+          String url = await uploadProductImage(
+            newImageBytesList[i],
+            productId,
+            index: startIndex + i,
+          );
+          finalImageUrls.add(url);
+        }
+      } else if (newImageBytes != null) {
+        // Fallback: single image update
+        String url = await uploadProductImage(newImageBytes, productId);
+        finalImageUrls = [url];
       }
+
+      String mainImageUrl = finalImageUrls.isNotEmpty
+          ? finalImageUrls.first
+          : (existingImageUrl ?? 'assets/images/profile_placeholder.png');
 
       final user = _auth.currentUser;
       String sellerName =
@@ -145,7 +201,9 @@ class DatabaseService {
         'category': category.toUpperCase(),
         'description': description,
         'location': location,
-        'imagePath': finalImageUrl,
+        'condition': condition,
+        'imagePath': mainImageUrl,
+        'imageUrls': finalImageUrls,
         'sellerName': sellerName,
         'sellerPhoto': sellerPhoto,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -160,10 +218,39 @@ class DatabaseService {
   /// Menghapus produk dari Firestore beserta file gambarnya di Firebase Storage
   Future<void> deleteProduct(String productId) async {
     try {
+      // Coba hapus document dulu
+      final doc = await _db.collection('products').doc(productId).get();
+      final data = doc.data();
+
       await _db.collection('products').doc(productId).delete();
-      await _storage.ref().child('products').child('$productId.jpg').delete();
+
+      // Hapus semua foto terkait di Storage
+      if (data != null && data['imageUrls'] != null) {
+        List<String> urls = List<String>.from(data['imageUrls']);
+        for (int i = 0; i < urls.length; i++) {
+          try {
+            await _storage
+                .ref()
+                .child('products')
+                .child('${productId}_$i.jpg')
+                .delete();
+          } catch (_) {
+            // Lanjut jika foto tertentu gagal dihapus
+          }
+        }
+      }
+      // Fallback: hapus foto lama format single
+      try {
+        await _storage
+            .ref()
+            .child('products')
+            .child('$productId.jpg')
+            .delete();
+      } catch (_) {
+        // Tidak perlu error jika file tidak ditemukan
+      }
     } catch (e) {
-      print('Info: Foto di Storage tidak ada atau gagal dihapus: $e');
+      print('Info: Gagal menghapus produk atau fotonya: $e');
     }
   }
 
@@ -239,7 +326,7 @@ class DatabaseService {
   /// Aliran data memuat riwayat produk jualan user yang dibeli orang lain (Past Sells Screen)
   Stream<QuerySnapshot> getPastSellsStream(String userId) {
     return _db
-        .collection('orders') // PERBAIKAN: Mengganti 'orders" menjadi 'orders'
+        .collection('orders')
         .where('sellerId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots();

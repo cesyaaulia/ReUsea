@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import '../models/product_model.dart';
 import 'detail_page.dart';
 import 'notification_page.dart';
@@ -13,7 +14,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String _selectedCategory = "All Items";
+  String _selectedCategory = "Semua";
   String _searchQuery = "";
 
   @override
@@ -70,8 +71,8 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationPage(),
+                    FadeScaleRoute(
+                      page: const NotificationPage(),
                     ),
                   );
                 },
@@ -118,17 +119,24 @@ class _HomePageState extends State<HomePage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildCategoryChip("All Items"),
-                  _buildCategoryChip("Books"),
-                  _buildCategoryChip("Electronics"),
+                  _buildCategoryChip("Semua"),
+                  _buildCategoryChip("Buku"),
+                  _buildCategoryChip("Elektronik"),
                   _buildCategoryChip("Fashion"),
+                  _buildCategoryChip("Peralatan"),
+                  _buildCategoryChip("Olahraga"),
+                  _buildCategoryChip("Kendaraan"),
+                  _buildCategoryChip("Makanan"),
+                  _buildCategoryChip("Kesehatan"),
+                  _buildCategoryChip("Hobi"),
+                  _buildCategoryChip("Lainnya"),
                 ],
               ),
             ),
             const SizedBox(height: 25),
 
             const Text(
-              'Fresh Listings',
+              'Produk Terbaru',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
@@ -219,7 +227,7 @@ class _HomePageState extends State<HomePage> {
 
         var productsDocs = snapshot.data!.docs;
 
-        if (_selectedCategory != "All Items") {
+        if (_selectedCategory != "Semua") {
           productsDocs = productsDocs.where((doc) {
             return doc['category'].toString().toUpperCase() ==
                 _selectedCategory.toUpperCase();
@@ -265,8 +273,8 @@ class _HomePageState extends State<HomePage> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => DetailPage(product: product),
+                  HeroFadeRoute(
+                    page: DetailPage(product: product),
                   ),
                 );
               },

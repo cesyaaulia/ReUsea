@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:reusea/models/product_model.dart';
 import 'package:reusea/services/auth_service.dart';
 import 'package:reusea/services/database_service.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/pages/edit_items_page.dart';
 
 class MyItemsPage extends StatefulWidget {
@@ -146,13 +147,52 @@ class _MyItemsPageState extends State<MyItemsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        Text(
+                          product.category,
+                          style: const TextStyle(
+                            color: Color(0xFFBC8E52),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: product.condition == 'Baru'
+                                ? Colors.green.shade50
+                                : Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            product.condition,
+                            style: TextStyle(
+                              color: product.condition == 'Baru'
+                                  ? Colors.green
+                                  : Colors.orange,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
                     Text(
                       product.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       product.price,
                       style: const TextStyle(
@@ -175,8 +215,8 @@ class _MyItemsPageState extends State<MyItemsPage> {
                     // Navigasi ke EditItemPage dengan membawa data produk dan ID
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => EditItemPage(
+                      SlideUpRoute(
+                        page: EditItemPage(
                           product: product,
                           productId: productId,
                         ),

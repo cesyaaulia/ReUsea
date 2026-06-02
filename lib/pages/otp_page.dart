@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:reusea/services/auth_service.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import 'main_navigation.dart';
 
 class OtpPage extends StatefulWidget {
@@ -25,7 +26,7 @@ class _OtpPageState extends State<OtpPage> {
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
+          ElegantFadeRoute(page: const MainNavigation()),
           (route) => false,
         );
       }

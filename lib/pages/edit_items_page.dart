@@ -28,12 +28,31 @@ class _EditItemPageState extends State<EditItemPage> {
   late TextEditingController _priceController;
   late TextEditingController _descriptionController;
 
-  final List<String> categories = ["Books", "Electronics", "Fashion"];
+  // =============================================
+  // KATEGORI LENGKAP BAHASA INDONESIA
+  // =============================================
+  final List<String> categories = [
+    "Buku",
+    "Elektronik",
+    "Fashion",
+    "Peralatan",
+    "Olahraga",
+    "Kendaraan",
+    "Makanan",
+    "Kesehatan",
+    "Hobi",
+    "Lainnya",
+  ];
   late String selectedCategory;
   late String selectedLocation;
+  late String selectedCondition;
 
-  // Penampung foto baru
-  Uint8List? _newImageBytes;
+  // =============================================
+  // MULTI-FOTO: Existing URLs + New bytes
+  // =============================================
+  List<String> _existingImageUrls = [];
+  final List<Uint8List> _newImageBytesList = [];
+  static const int maxPhotos = 5;
   bool _isLoading = false;
 
   @override
@@ -46,14 +65,18 @@ class _EditItemPageState extends State<EditItemPage> {
       text: widget.product.description,
     );
 
-    // Normalisasi category: disesuaikan agar cocok dengan list kategor (karena di DB Caps)
+    // Normalisasi category: disesuaikan agar cocok dengan list kategori
     String categoryInDb = widget.product.category.toLowerCase();
     selectedCategory = categories.firstWhere(
       (cat) => cat.toLowerCase() == categoryInDb,
-      orElse: () => "Books",
+      orElse: () => "Lainnya",
     );
 
     selectedLocation = widget.product.location;
+    selectedCondition = widget.product.condition;
+
+    // Load existing image URLs dari produk
+    _existingImageUrls = List<String>.from(widget.product.imageUrls);
   }
 
   @override
@@ -64,7 +87,19 @@ class _EditItemPageState extends State<EditItemPage> {
     super.dispose();
   }
 
+  int get _totalPhotos => _existingImageUrls.length + _newImageBytesList.length;
+
   Future<void> _pickImage() async {
+    if (_totalPhotos >= maxPhotos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Maksimal 5 foto per produk!"),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
     final ImagePicker picker = ImagePicker();
     try {
       final XFile? image = await picker.pickImage(
@@ -75,7 +110,7 @@ class _EditItemPageState extends State<EditItemPage> {
       if (image != null) {
         var bytes = await image.readAsBytes();
         setState(() {
-          _newImageBytes = bytes;
+          _newImageBytesList.add(bytes);
         });
       }
     } catch (e) {
@@ -85,6 +120,18 @@ class _EditItemPageState extends State<EditItemPage> {
         );
       }
     }
+  }
+
+  void _removeExistingImage(int index) {
+    setState(() {
+      _existingImageUrls.removeAt(index);
+    });
+  }
+
+  void _removeNewImage(int index) {
+    setState(() {
+      _newImageBytesList.removeAt(index);
+    });
   }
 
   // LOGIKA UTAMA: MEMPERBARUI DATA
@@ -101,6 +148,16 @@ class _EditItemPageState extends State<EditItemPage> {
       return;
     }
 
+    if (_existingImageUrls.isEmpty && _newImageBytesList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Wajib memiliki minimal 1 foto produk!"),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     // Memanggil fungsi updateProduct di DatabaseService
@@ -111,9 +168,10 @@ class _EditItemPageState extends State<EditItemPage> {
       category: selectedCategory,
       description: _descriptionController.text.trim(),
       location: selectedLocation,
-      newImageBytes:
-          _newImageBytes, // Kirim bytes foto BARU (bisa null jika user ga ganti foto)
-      existingImageUrl: widget.product.imagePath, // Kirim URL foto LAMA
+      condition: selectedCondition,
+      newImageBytesList:
+          _newImageBytesList.isNotEmpty ? _newImageBytesList : null,
+      existingImageUrls: _existingImageUrls,
       onSuccess: () {
         setState(() => _isLoading = false);
         if (mounted) {
@@ -148,7 +206,7 @@ class _EditItemPageState extends State<EditItemPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: const Text(
-          "Edit Item",
+          "Edit Barang",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -163,34 +221,38 @@ class _EditItemPageState extends State<EditItemPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // =============================================
+            // SECTION: MULTI-FOTO PRODUK
+            // =============================================
             const Text(
-              "Product Photos (Klik slot UTAMA untuk mengganti)",
+              "Foto Produk",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: _buildPhotoSlot("MAIN", true),
-                ),
-                const SizedBox(width: 10),
-                _buildPhotoSlot("+", false),
-                const SizedBox(width: 10),
-                _buildPhotoSlot("+", false),
-              ],
+            Text(
+              "Maksimal $maxPhotos foto. Tap + untuk tambah, X untuk hapus.",
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
+            const SizedBox(height: 12),
+            _buildPhotoGrid(),
             const SizedBox(height: 25),
-            _buildInputLabel("Product Name"),
-            _buildTextField("e.g. Almamater UNESA Size L", _nameController),
+
+            // =============================================
+            // SECTION: NAMA PRODUK
+            // =============================================
+            _buildInputLabel("Nama Produk"),
+            _buildTextField("cth. Almamater UNESA Size L", _nameController),
             const SizedBox(height: 15),
+
+            // =============================================
+            // SECTION: HARGA & KATEGORI (Row)
+            // =============================================
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInputLabel("Price"),
+                      _buildInputLabel("Harga"),
                       _buildTextField(
                         "Rp 0",
                         _priceController,
@@ -205,7 +267,7 @@ class _EditItemPageState extends State<EditItemPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInputLabel("Category"),
+                      _buildInputLabel("Kategori"),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         height: 57,
@@ -222,6 +284,7 @@ class _EditItemPageState extends State<EditItemPage> {
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                           ),
+                          isExpanded: true,
                           items: categories.map((String cat) {
                             return DropdownMenuItem<String>(
                               value: cat,
@@ -244,15 +307,35 @@ class _EditItemPageState extends State<EditItemPage> {
               ],
             ),
             const SizedBox(height: 15),
-            _buildInputLabel("Description"),
+
+            // =============================================
+            // SECTION: KONDISI BARANG
+            // =============================================
+            _buildInputLabel("Kondisi Barang"),
+            Row(
+              children: [
+                _buildConditionChip("Baru", Icons.fiber_new_outlined),
+                const SizedBox(width: 12),
+                _buildConditionChip("Bekas", Icons.recycling_outlined),
+              ],
+            ),
+            const SizedBox(height: 15),
+
+            // =============================================
+            // SECTION: DESKRIPSI
+            // =============================================
+            _buildInputLabel("Deskripsi"),
             _buildTextField(
-              "Describe your item (condition, usage time, etc.)",
+              "Jelaskan kondisi barang, lama pemakaian, dll.",
               _descriptionController,
               maxLines: 4,
             ),
             const SizedBox(height: 15),
 
-            _buildInputLabel("Pickup Location"),
+            // =============================================
+            // SECTION: LOKASI PICKUP
+            // =============================================
+            _buildInputLabel("Lokasi Pengambilan"),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
@@ -305,7 +388,7 @@ class _EditItemPageState extends State<EditItemPage> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                        "Save Changes",
+                        "Simpan Perubahan",
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -315,6 +398,234 @@ class _EditItemPageState extends State<EditItemPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // =============================================
+  // WIDGET: GRID FOTO (existing URLs + new bytes + add button)
+  // =============================================
+  Widget _buildPhotoGrid() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        // 1. Foto existing (dari URL)
+        for (int i = 0; i < _existingImageUrls.length; i++)
+          _buildExistingPhotoItem(i),
+        // 2. Foto baru (dari bytes)
+        for (int i = 0; i < _newImageBytesList.length; i++)
+          _buildNewPhotoItem(i),
+        // 3. Tombol tambah foto
+        if (_totalPhotos < maxPhotos)
+          GestureDetector(
+            onTap: _pickImage,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFBC8E52).withValues(alpha: 0.5),
+                  width: 1.5,
+                  strokeAlign: BorderSide.strokeAlignInside,
+                ),
+              ),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_photo_alternate_outlined,
+                      color: Color(0xFFBC8E52), size: 28),
+                  SizedBox(height: 4),
+                  Text(
+                    "Tambah",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFFBC8E52),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildExistingPhotoItem(int index) {
+    bool isFirst = index == 0 && _existingImageUrls.isNotEmpty;
+    String url = _existingImageUrls[index];
+
+    return Stack(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: isFirst
+                ? Border.all(color: const Color(0xFFBC8E52), width: 2)
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(isFirst ? 10 : 12),
+            child: url.startsWith('http')
+                ? Image.network(url, fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) =>
+                        const Icon(Icons.broken_image, color: Colors.grey))
+                : const Icon(Icons.image, color: Colors.grey),
+          ),
+        ),
+        if (isFirst)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFBC8E52),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(10),
+                  bottomRight: Radius.circular(10),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: const Text(
+                "UTAMA",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        Positioned(
+          top: -2,
+          right: -2,
+          child: GestureDetector(
+            onTap: () => _removeExistingImage(index),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 14, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNewPhotoItem(int index) {
+    // Index global: setelah foto existing
+    bool isFirst = _existingImageUrls.isEmpty && index == 0;
+
+    return Stack(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: isFirst
+                ? Border.all(color: const Color(0xFFBC8E52), width: 2)
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(isFirst ? 10 : 12),
+            child: Image.memory(_newImageBytesList[index], fit: BoxFit.cover),
+          ),
+        ),
+        if (isFirst)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFBC8E52),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(10),
+                  bottomRight: Radius.circular(10),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: const Text(
+                "UTAMA",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        Positioned(
+          top: -2,
+          right: -2,
+          child: GestureDetector(
+            onTap: () => _removeNewImage(index),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 14, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // =============================================
+  // WIDGET: CHIP KONDISI BARANG
+  // =============================================
+  Widget _buildConditionChip(String label, IconData icon) {
+    bool isSelected = selectedCondition == label;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => selectedCondition = label),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFBC8E52) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFFBC8E52)
+                  : Colors.grey.shade300,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isSelected ? Colors.white : const Color(0xFFBC8E52),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -350,68 +661,9 @@ class _EditItemPageState extends State<EditItemPage> {
       ),
     );
   }
-
-  // Slot foto dimodifikasi untuk menampilkan FOTO LAMA (URL) atau FOTO BARU (Byte)
-  Widget _buildPhotoSlot(String label, bool isMain) {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: isMain
-            ? Border.all(color: const Color(0xFFBC8E52), width: 2)
-            : null,
-      ),
-      child: isMain
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              // Prioritas 1: Tampilkan foto baru yang barusan dipilih user
-              child: _newImageBytes != null
-                  ? Image.memory(_newImageBytes!, fit: BoxFit.cover)
-                  // Prioritas 2: Tampilkan foto lama yang sudah ada di Firebase Storage
-                  : widget.product.imagePath.startsWith('http')
-                  ? Image.network(widget.product.imagePath, fit: BoxFit.cover)
-                  // Fallback: Tampilkan ikon placeholder
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.camera_alt_outlined,
-                          color: Color(0xFFBC8E52),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          label,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFFBC8E52),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-            )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.add, color: Color(0xFFBC8E52)),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFFBC8E52),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
 }
 
-// Copy kelas CurrencyInputFormatter dari sell_item_page.dart ke bagian bawah file ini
+// Copy kelas CurrencyInputFormatter dari sell_item_page.dart
 class CurrencyInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -420,11 +672,12 @@ class CurrencyInputFormatter extends TextInputFormatter {
   ) {
     if (newValue.text.isEmpty) return newValue.copyWith(text: '');
     String cleaned = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (cleaned.isEmpty)
+    if (cleaned.isEmpty) {
       return newValue.copyWith(
         text: 'Rp 0',
         selection: const TextSelection.collapsed(offset: 4),
       );
+    }
     final chars = cleaned.split('');
     String formatted = '';
     int count = 0;

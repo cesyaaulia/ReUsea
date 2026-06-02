@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import 'home_page.dart';
 import 'chat_page.dart';
 import 'my_items_page.dart';
@@ -14,6 +15,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+  int _previousIndex = 0;
 
   // Daftar halaman utama Bottom Navigation Bar ReUsea
   final List<Widget> _pages = [
@@ -26,13 +28,37 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          // Tentukan arah slide berdasarkan index tab
+          final isForward = _selectedIndex > _previousIndex;
+          final slideAnimation = Tween<Offset>(
+            begin: Offset(isForward ? 0.15 : -0.15, 0.0),
+            end: Offset.zero,
+          ).animate(animation);
+
+          return SlideTransition(
+            position: slideAnimation,
+            child: FadeTransition(
+              opacity: animation,
+              child: child,
+            ),
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(_selectedIndex),
+          child: _pages[_selectedIndex],
+        ),
+      ),
       // TOMBOL PLUS TENGAH MELAYANG (Desain Hijau Khas Eco-Friendly)
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const SellItemPage()),
+            SlideUpRoute(page: const SellItemPage()),
           );
         },
         backgroundColor: const Color(0xFF7BA699),
@@ -85,7 +111,10 @@ class _MainNavigationState extends State<MainNavigation> {
     Color activeColor = const Color(0xFFBC8E52); // Warna emas/cokelat ReUsea
 
     return InkWell(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () => setState(() {
+        _previousIndex = _selectedIndex;
+        _selectedIndex = index;
+      }),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
