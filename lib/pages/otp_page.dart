@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:reusea/services/auth_service.dart';
 import 'main_navigation.dart';
 
 class OtpPage extends StatefulWidget {
@@ -9,76 +10,95 @@ class OtpPage extends StatefulWidget {
 }
 
 class _OtpPageState extends State<OtpPage> {
-  // Membuat 4 controller untuk masing-masing kotak OTP
-  List<TextEditingController> controllers = List.generate(4, (index) => TextEditingController());
+  final AuthService _authService = AuthService();
+  bool _isChecking = false;
+
+  void _verifyEmailStatus() async {
+    setState(() => _isChecking = true);
+
+    bool isVerified = await _authService.checkEmailVerification();
+
+    setState(() => _isChecking = false);
+
+    if (isVerified) {
+      // Jika terbukti sudah klik link di Gmail, langsung masuk aplikasi utama
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
+          (route) => false,
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Email belum diverifikasi. Buka Gmail dan klik tautan dari Firebase dahulu!",
+            ),
+            backgroundColor: Colors.orangeAccent,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Colors.black)),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 20),
-            const Text("Verification", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            const Text(
-              "Enter the 4-digit code sent to your UNESA email.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+            const Icon(
+              Icons.mark_email_unread_outlined,
+              size: 100,
+              color: Color(0xFFBC8E52),
             ),
-            const SizedBox(height: 40),
-            // Barisan Kotak OTP
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(4, (index) => _buildOtpBox(index)),
+            const SizedBox(height: 30),
+            const Text(
+              "Verifikasi Akun",
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 15),
+            const Text(
+              "Kami telah mengirimkan tautan verifikasi ke email mahasiswa UNESA Anda.\n\nSilakan buka kotak masuk Gmail Anda, klik tautan tersebut, kemudian kembali ke aplikasi ini.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, height: 1.5),
             ),
             const SizedBox(height: 40),
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: () {
-                  // Logika verifikasi OTP di sini
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainNavigation()));
-                },
+                onPressed: _isChecking ? null : _verifyEmailStatus,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFBC8E52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text("Verify & Register", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: _isChecking
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "Saya Sudah Klik Tautan Verifikasi",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
             ),
-            TextButton(
-              onPressed: () {},
-              child: const Text("Resend Code", style: TextStyle(color: Color(0xFFBC8E52))),
-            )
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildOtpBox(int index) {
-    return SizedBox(
-      width: 60,
-      child: TextField(
-        controller: controllers[index],
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 1,
-        decoration: InputDecoration(
-          counterText: "",
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.grey)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFBC8E52), width: 2)),
-        ),
-        onChanged: (value) {
-          if (value.isNotEmpty && index < 3) {
-            FocusScope.of(context).nextFocus(); // Pindah ke kotak berikutnya otomatis
-          }
-        },
       ),
     );
   }

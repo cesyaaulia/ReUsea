@@ -1,31 +1,60 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Wajib diimpor untuk menggunakan TextInputFormatter
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:reusea/services/auth_service.dart';
+import 'package:reusea/models/product_model.dart';
 import 'package:reusea/services/database_service.dart';
 
-class SellItemPage extends StatefulWidget {
-  const SellItemPage({super.key});
+class EditItemPage extends StatefulWidget {
+  // Terima objek produk dan document ID dari halaman MyItems
+  final Product product;
+  final String productId;
+
+  const EditItemPage({
+    super.key,
+    required this.product,
+    required this.productId,
+  });
 
   @override
-  State<SellItemPage> createState() => _SellItemPageState();
+  State<EditItemPage> createState() => _EditItemPageState();
 }
 
-class _SellItemPageState extends State<SellItemPage> {
+class _EditItemPageState extends State<EditItemPage> {
   final DatabaseService _dbService = DatabaseService();
-  final AuthService _authService = AuthService();
 
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  // Inisialisasi controller dengan data lama dari widget.product
+  late TextEditingController _nameController;
+  late TextEditingController _priceController;
+  late TextEditingController _descriptionController;
 
   final List<String> categories = ["Books", "Electronics", "Fashion"];
-  String selectedCategory = "Books";
-  String selectedLocation = "UNESA Lidah Wetan, Surabaya";
+  late String selectedCategory;
+  late String selectedLocation;
 
-  Uint8List? _imageBytes;
+  // Penampung foto baru
+  Uint8List? _newImageBytes;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Isi data lama produk ke dalam controllers saat halaman dibuka
+    _nameController = TextEditingController(text: widget.product.name);
+    _priceController = TextEditingController(text: widget.product.price);
+    _descriptionController = TextEditingController(
+      text: widget.product.description,
+    );
+
+    // Normalisasi category: disesuaikan agar cocok dengan list kategor (karena di DB Caps)
+    String categoryInDb = widget.product.category.toLowerCase();
+    selectedCategory = categories.firstWhere(
+      (cat) => cat.toLowerCase() == categoryInDb,
+      orElse: () => "Books",
+    );
+
+    selectedLocation = widget.product.location;
+  }
 
   @override
   void dispose() {
@@ -46,19 +75,20 @@ class _SellItemPageState extends State<SellItemPage> {
       if (image != null) {
         var bytes = await image.readAsBytes();
         setState(() {
-          _imageBytes = bytes;
+          _newImageBytes = bytes;
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Gagal mengambil gambar: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal mengambil gambar baru: $e")),
+        );
       }
     }
   }
 
-  void _handleUploadItem() async {
+  // LOGIKA UTAMA: MEMPERBARUI DATA
+  void _handleUpdateItem() async {
     if (_nameController.text.trim().isEmpty ||
         _priceController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty) {
@@ -71,46 +101,42 @@ class _SellItemPageState extends State<SellItemPage> {
       return;
     }
 
-    if (_imageBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Wajib mengunggah minimal 1 foto produk!"),
-          backgroundColor: Colors.orangeAccent,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
-    String currentUserId = _authService.currentUser?.uid ?? "anonymous_user";
 
-    await _dbService.uploadProduct(
+    // Memanggil fungsi updateProduct di DatabaseService
+    await _dbService.updateProduct(
+      productId: widget.productId,
       name: _nameController.text.trim(),
-      price: _priceController.text
-          .trim(), // Data harga dikirim sudah dalam format 'Rp X.XXX'
+      price: _priceController.text.trim(),
       category: selectedCategory,
       description: _descriptionController.text.trim(),
       location: selectedLocation,
-      sellerId: currentUserId,
-      imageBytes: _imageBytes,
+      newImageBytes:
+          _newImageBytes, // Kirim bytes foto BARU (bisa null jika user ga ganti foto)
+      existingImageUrl: widget.product.imagePath, // Kirim URL foto LAMA
       onSuccess: () {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Selamat! Barang Anda berhasil diunggah."),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Data barang berhasil diperbarui."),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Kembali ke halaman My Items
+          Navigator.pop(context);
+        }
       },
       onError: (errorMessage) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       },
     );
   }
@@ -122,7 +148,7 @@ class _SellItemPageState extends State<SellItemPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: const Text(
-          "Sell Item",
+          "Edit Item",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -138,7 +164,7 @@ class _SellItemPageState extends State<SellItemPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "Product Photos (Klik slot UTAMA untuk memilih foto)",
+              "Product Photos (Klik slot UTAMA untuk mengganti)",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -160,7 +186,6 @@ class _SellItemPageState extends State<SellItemPage> {
             const SizedBox(height: 15),
             Row(
               children: [
-                // --- KOLOM INPUT HARGA DENGAN FORMATTER OTOMATIS ---
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,11 +194,8 @@ class _SellItemPageState extends State<SellItemPage> {
                       _buildTextField(
                         "Rp 0",
                         _priceController,
-                        keyboardType:
-                            TextInputType.number, // Membuka keyboard angka saja
-                        formatters: [
-                          CurrencyInputFormatter(),
-                        ], // Memasang masker otomatis Rp dan Titik
+                        keyboardType: TextInputType.number,
+                        formatters: [CurrencyInputFormatter()],
                       ),
                     ],
                   ),
@@ -273,7 +295,7 @@ class _SellItemPageState extends State<SellItemPage> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleUploadItem,
+                onPressed: _isLoading ? null : _handleUpdateItem,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFBC8E52),
                   shape: RoundedRectangleBorder(
@@ -283,7 +305,7 @@ class _SellItemPageState extends State<SellItemPage> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                        "Upload Item",
+                        "Save Changes",
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -305,7 +327,6 @@ class _SellItemPageState extends State<SellItemPage> {
     );
   }
 
-  // Fungsi helper TextField dimodifikasi agar menerima parameter keyboardType dan formatters secara fleksibel
   Widget _buildTextField(
     String hint,
     TextEditingController controller, {
@@ -330,6 +351,7 @@ class _SellItemPageState extends State<SellItemPage> {
     );
   }
 
+  // Slot foto dimodifikasi untuk menampilkan FOTO LAMA (URL) atau FOTO BARU (Byte)
   Widget _buildPhotoSlot(String label, bool isMain) {
     return Container(
       width: 100,
@@ -341,18 +363,39 @@ class _SellItemPageState extends State<SellItemPage> {
             ? Border.all(color: const Color(0xFFBC8E52), width: 2)
             : null,
       ),
-      child: isMain && _imageBytes != null
+      child: isMain
           ? ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.memory(_imageBytes!, fit: BoxFit.cover),
+              // Prioritas 1: Tampilkan foto baru yang barusan dipilih user
+              child: _newImageBytes != null
+                  ? Image.memory(_newImageBytes!, fit: BoxFit.cover)
+                  // Prioritas 2: Tampilkan foto lama yang sudah ada di Firebase Storage
+                  : widget.product.imagePath.startsWith('http')
+                  ? Image.network(widget.product.imagePath, fit: BoxFit.cover)
+                  // Fallback: Tampilkan ikon placeholder
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.camera_alt_outlined,
+                          color: Color(0xFFBC8E52),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFBC8E52),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
             )
           : Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  isMain ? Icons.camera_alt_outlined : Icons.add,
-                  color: const Color(0xFFBC8E52),
-                ),
+                const Icon(Icons.add, color: Color(0xFFBC8E52)),
                 const SizedBox(height: 4),
                 Text(
                   label,
@@ -368,49 +411,31 @@ class _SellItemPageState extends State<SellItemPage> {
   }
 }
 
-// ====================================================================
-// --- CLASS CUSTOM FORMATTER UNTUK OTOMATISASI RP DAN TITIK RIBUAN ---
-// ====================================================================
+// Copy kelas CurrencyInputFormatter dari sell_item_page.dart ke bagian bawah file ini
 class CurrencyInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    if (newValue.text.isEmpty) {
-      return newValue.copyWith(text: '');
-    }
-
-    // Hapus semua karakter yang bukan angka agar perhitungan bersih
+    if (newValue.text.isEmpty) return newValue.copyWith(text: '');
     String cleaned = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-
-    if (cleaned.isEmpty) {
+    if (cleaned.isEmpty)
       return newValue.copyWith(
         text: 'Rp 0',
         selection: const TextSelection.collapsed(offset: 4),
       );
-    }
-
-    // Ubah string angka menjadi susunan list karakter
     final chars = cleaned.split('');
     String formatted = '';
     int count = 0;
-
-    // Looping mundur untuk menyisipkan titik setiap 3 digit angka
     for (int i = chars.length - 1; i >= 0; i--) {
       formatted = chars[i] + formatted;
       count++;
-      if (count % 3 == 0 && i != 0) {
-        formatted = '.$formatted';
-      }
+      if (count % 3 == 0 && i != 0) formatted = '.$formatted';
     }
-
-    // Gabungkan dengan awalan Rp
     formatted = 'Rp $formatted';
-
     return TextEditingValue(
       text: formatted,
-      // Mengunci posisi kursor ketikan agar selalu berada di paling kanan huruf
       selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
