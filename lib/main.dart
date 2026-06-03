@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,11 @@ import 'package:reusea/pages/main_navigation.dart';
 import 'firebase_options.dart';
 
 void main() async {
+  // Overiding target platform ke android di web agar google_maps_flutter_web terdaftar
+  if (kIsWeb) {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+  }
+
   // Pastikan binding Flutter sudah siap sebelum memanggil Firebase
   WidgetsFlutterBinding.ensureInitialized();
 

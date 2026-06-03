@@ -5,6 +5,7 @@ import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import '../models/product_model.dart';
 import 'chat_detail_page.dart';
+import 'checkout_page.dart';
 
 class DetailPage extends StatefulWidget {
   final Product product;
@@ -141,48 +142,55 @@ class _DetailPageState extends State<DetailPage> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home, color: Colors.black),
+            onPressed: () {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            tooltip: "Kembali ke Beranda",
+          ),
+        ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 800) {
-            // WEB/TABLET SIDE-BY-SIDE LAYOUT
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left Side: Image Carousel
-                Expanded(
-                  flex: 5,
-                  child: SingleChildScrollView(
-                    child: _buildImageCarousel(imageUrls, totalImages),
-                  ),
-                ),
-                // Vertical Divider
-                Container(
-                  width: 1,
-                  color: Colors.grey[200],
-                ),
-                // Right Side: Details Info
-                Expanded(
-                  flex: 6,
-                  child: SingleChildScrollView(
-                    child: _buildProductDetailsInfo(),
-                  ),
-                ),
-              ],
-            );
-          } else {
-            // MOBILE STACKED LAYOUT
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildImageCarousel(imageUrls, totalImages),
-                  _buildProductDetailsInfo(),
-                ],
-              ),
-            );
-          }
-        },
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 700) {
+                  // Desktop/Web side-by-side layout (scrolling together)
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left Side: Image Carousel
+                      Expanded(
+                        flex: 5,
+                        child: _buildImageCarousel(imageUrls, totalImages),
+                      ),
+                      const SizedBox(width: 24),
+                      // Right Side: Details Info
+                      Expanded(
+                        flex: 6,
+                        child: _buildProductDetailsInfo(),
+                      ),
+                    ],
+                  );
+                } else {
+                  // Mobile stacked layout
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildImageCarousel(imageUrls, totalImages),
+                      _buildProductDetailsInfo(),
+                    ],
+                  );
+                }
+              },
+            ),
+          ),
+        ),
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
@@ -204,6 +212,10 @@ class _DetailPageState extends State<DetailPage> {
                             "Barangnya masih ada nggak kak?",
                             "Kondisi barangnya gimana kak?",
                             "Boleh nego nggak kak?",
+                            "Bisa COD di sekitar UNESA Lidah Wetan?",
+                            "Bisa COD di sekitar UNESA Ketintang?",
+                            "Ada minus lain yang belum ditulis di deskripsi?",
+                            "Harga pasnya berapa ya kak?",
                           ],
                         );
                       },
@@ -223,13 +235,30 @@ class _DetailPageState extends State<DetailPage> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        _navigateToChat(
-                          initialSuggestions: [
-                            "Halo kak, saya mau beli barang ini!",
-                            "Bisa COD di mana kak?",
-                            "Barangnya masih ada nggak kak?",
-                            "Boleh nego harganya kak?",
-                          ],
+                        final currentUser = _auth.currentUser;
+                        if (currentUser == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Silakan login terlebih dahulu."),
+                              backgroundColor: Colors.orangeAccent,
+                            ),
+                          );
+                          return;
+                        }
+                        if (widget.product.sellerId == currentUser.uid) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Anda tidak bisa membeli barang sendiri!"),
+                              backgroundColor: Colors.orangeAccent,
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.push(
+                          context,
+                          SlideUpRoute(
+                            page: CheckoutPage(product: widget.product),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -288,8 +317,15 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                             )
                           : Image.asset(
-                              'assets/images/profile_placeholder.png',
+                              url.isNotEmpty ? url : 'assets/images/profile_placeholder.png',
                               fit: BoxFit.cover,
+                              errorBuilder: (c, e, s) => const Center(
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  size: 50,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ),
                     );
                   },
@@ -309,8 +345,15 @@ class _DetailPageState extends State<DetailPage> {
                           ),
                         )
                       : Image.asset(
-                          'assets/images/profile_placeholder.png',
+                          widget.product.imagePath.isNotEmpty ? widget.product.imagePath : 'assets/images/profile_placeholder.png',
                           fit: BoxFit.cover,
+                          errorBuilder: (c, e, s) => const Center(
+                            child: Icon(
+                              Icons.image_outlined,
+                              size: 50,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ),
                 ),
         ),
@@ -540,6 +583,32 @@ class _DetailPageState extends State<DetailPage> {
                     return _buildSellerRow(sellerName, sellerPhoto);
                   },
                 ),
+          const SizedBox(height: 30),
+          const Divider(height: 1),
+          const SizedBox(height: 20),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              icon: const Icon(Icons.home, color: Color(0xFF1A2235)),
+              label: const Text(
+                "Kembali ke Beranda",
+                style: TextStyle(
+                  color: Color(0xFF1A2235),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                backgroundColor: const Color(0xFFF2F1EE),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

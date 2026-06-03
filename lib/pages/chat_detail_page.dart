@@ -48,8 +48,32 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _currentUserId = user?.uid ?? '';
     _currentUserName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Pembeli';
 
-    // Inisialisasi suggestion chips
-    if (widget.initialSuggestions != null) {
+    // Inisialisasi suggestion chips secara dinamis berdasarkan peran (Buyer/Seller)
+    if (widget.product != null) {
+      if (widget.product!.sellerId == _currentUserId) {
+        // Current user adalah SELLER
+        _suggestions = [
+          "Barang masih tersedia ya kak",
+          "Kondisi masih bagus kak",
+          "Bisa nego tipis kok kak",
+          "Bisa COD di depan gerbang UNESA Lidah Wetan",
+          "Bisa COD di depan gerbang UNESA Ketintang",
+          "Maaf, harganya sudah pas/nett kak",
+          "Sudah tidak ada minus lain kak, siap pakai",
+        ];
+      } else {
+        // Current user adalah BUYER
+        _suggestions = [
+          "Barangnya masih ada nggak kak?",
+          "Kondisi barangnya gimana kak?",
+          "Boleh nego nggak kak?",
+          "Bisa COD di sekitar UNESA Lidah Wetan?",
+          "Bisa COD di sekitar UNESA Ketintang?",
+          "Ada minus lain yang belum ditulis di deskripsi?",
+          "Harga pasnya berapa ya kak?",
+        ];
+      }
+    } else if (widget.initialSuggestions != null) {
       _suggestions = List<String>.from(widget.initialSuggestions!);
     }
 
@@ -381,6 +405,16 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   : Image.asset(
                       'assets/images/profile_placeholder.png',
                       fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => Container(
+                        color: const Color(0xFFF2F1EE),
+                        child: const Center(
+                          child: Icon(
+                            Icons.person_outline,
+                            color: Colors.grey,
+                            size: 24,
+                          ),
+                        ),
+                      ),
                     ),
             ),
           ),

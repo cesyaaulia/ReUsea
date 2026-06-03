@@ -320,6 +320,16 @@ class _HomePageState extends State<HomePage> {
                                       ? product.imagePath
                                       : 'assets/images/profile_placeholder.png',
                                   fit: BoxFit.cover,
+                                  errorBuilder: (c, e, s) => Container(
+                                    color: const Color(0xFFF2F1EE),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        color: Colors.grey,
+                                        size: 36,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                         ),
                       ),

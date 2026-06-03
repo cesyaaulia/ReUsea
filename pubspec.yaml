@@ -44,6 +44,11 @@ dependencies:
   image_picker: ^1.2.2
   firebase_storage: ^13.4.2
   video_player: ^2.8.2
+  url_launcher: ^6.2.5
+  google_maps_flutter: ^2.6.1
+  geolocator: ^12.0.0
+  geocoding: ^3.0.0
+  http: ^1.2.1
 
 dev_dependencies:
   flutter_test:

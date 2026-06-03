@@ -278,6 +278,13 @@ class DatabaseService {
     required String sellerName,
     required String buyerId,
     required String buyerName,
+    // Field baru untuk pengiriman
+    String buyerAddress = '',
+    double buyerLat = 0,
+    double buyerLng = 0,
+    String deliveryService = '',
+    double deliveryFee = 0,
+    double distanceKm = 0,
     required Function() onSuccess,
     required Function(String) onError,
   }) async {
@@ -296,6 +303,12 @@ class DatabaseService {
         'sellerName': sellerName,
         'buyerId': buyerId,
         'buyerName': buyerName,
+        'buyerAddress': buyerAddress,
+        'buyerLat': buyerLat,
+        'buyerLng': buyerLng,
+        'deliveryService': deliveryService,
+        'deliveryFee': deliveryFee,
+        'distanceKm': distanceKm,
         'status': 'Processing', // Status mula-mula
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -305,7 +318,7 @@ class DatabaseService {
         receiverId: sellerId,
         title: 'Produk Anda Terjual! 🎉',
         message:
-            '$buyerName telah membeli "$name" Anda seharga $price. Segera cek detail transaksi Anda!',
+            '$buyerName telah membeli "$name" Anda seharga $price. Pengiriman via $deliveryService. Segera cek detail transaksi Anda!',
       );
 
       onSuccess();

@@ -1,8 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Izin lokasi untuk GPS & map picker -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="reusea"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -41,5 +52,23 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Deep link ke Gojek -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="gojek"/>
+        </intent>
+        <package android:name="com.gojek.app"/>
+        <!-- Deep link ke Grab -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="grab"/>
+        </intent>
+        <package android:name="com.grabtaxi.passenger"/>
+        <!-- Untuk url_launcher fallback ke browser/play store -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>
+
