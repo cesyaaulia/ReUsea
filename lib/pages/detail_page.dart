@@ -175,7 +175,7 @@ class _DetailPageState extends State<DetailPage> {
                             return url.startsWith('http')
                                 ? Image.network(url, fit: BoxFit.cover)
                                 : Image.asset(
-                                    'assets/images/profile_placeholder.png',
+                                    url.isNotEmpty ? url : 'assets/images/profile_placeholder.png',
                                     fit: BoxFit.cover,
                                   );
                           },
@@ -183,7 +183,7 @@ class _DetailPageState extends State<DetailPage> {
                       : mainImagePath.startsWith('http')
                           ? Image.network(mainImagePath, fit: BoxFit.cover)
                           : Image.asset(
-                              'assets/images/profile_placeholder.png',
+                              mainImagePath.isNotEmpty ? mainImagePath : 'assets/images/profile_placeholder.png',
                               fit: BoxFit.cover,
                             ),
                 ),
@@ -290,7 +290,7 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                             ),
                             Text(
-                              "Uploaded $productTime",
+                              "Diunggah $productTime",
                               style: TextStyle(
                                 color: AppTheme.secondaryBlue.withValues(alpha: 0.7),
                                 fontSize: 11,
@@ -417,11 +417,13 @@ class _DetailPageState extends State<DetailPage> {
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
                         ),
                         const SizedBox(height: 14),
-                        FutureBuilder<DocumentSnapshot>(
-                          future: FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(widget.product.sellerId)
-                              .get(),
+                        FutureBuilder<DocumentSnapshot?>(
+                          future: widget.product.sellerId.isNotEmpty
+                              ? FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(widget.product.sellerId)
+                                  .get()
+                              : Future<DocumentSnapshot?>.value(null),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return const Padding(
@@ -429,7 +431,9 @@ class _DetailPageState extends State<DetailPage> {
                                 child: LinearProgressIndicator(color: AppTheme.primaryBlue),
                               );
                             }
-                            var userData = snapshot.data?.data() as Map<String, dynamic>?;
+                            var userData = snapshot.data != null && snapshot.data!.exists
+                                ? snapshot.data!.data() as Map<String, dynamic>?
+                                : null;
                             String sName = userData?['name'] ?? widget.product.sellerName;
                             String sPhoto = userData?['photoUrl'] ?? widget.product.sellerPhoto;
                             int solds = userData?['solds'] ?? 0;
@@ -573,11 +577,20 @@ class _DetailPageState extends State<DetailPage> {
                                             ),
                                           ),
                                           const SizedBox(height: 2),
+                                          Text(
+                                            "Bergabung: ${userData?['joinedAt'] ?? 'Januari 2026'}",
+                                            style: TextStyle(
+                                              color: AppTheme.secondaryBlue.withValues(alpha: 0.6),
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
                                           badgeWidget,
                                         ],
                                       ),
                                       ElevatedButton(
                                         onPressed: () {
+                                          if (widget.product.sellerId.isEmpty) return;
                                           Navigator.push(
                                             context,
                                             SlideFadeRightRoute(
@@ -609,6 +622,99 @@ class _DetailPageState extends State<DetailPage> {
                                     ],
                                   ),
                                 ],
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 32),
+                        const Text(
+                          "Produk Terkait",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+                        ),
+                        const SizedBox(height: 14),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('products')
+                              .where('category', isEqualTo: productCategory)
+                              .limit(4)
+                              .snapshots(),
+                          builder: (context, relSnapshot) {
+                            if (!relSnapshot.hasData) {
+                              return const SizedBox.shrink();
+                            }
+                            var docs = relSnapshot.data!.docs.where((d) => d.id != widget.product.id).toList();
+                            if (docs.isEmpty) {
+                              return const Text(
+                                "Tidak ada produk terkait lainnya.",
+                                style: TextStyle(color: AppTheme.secondaryBlue, fontSize: 12),
+                              );
+                            }
+                            return SizedBox(
+                              height: 170,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: docs.length,
+                                itemBuilder: (context, index) {
+                                  var docData = docs[index].data() as Map<String, dynamic>;
+                                  Product prod = Product.fromMap(docData);
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        HeroFadeRoute(page: DetailPage(product: prod)),
+                                      );
+                                    },
+                                    child: Container(
+                                      width: 130,
+                                      margin: const EdgeInsets.only(right: 14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: ClipRRect(
+                                              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                                              child: prod.imagePath.startsWith('http')
+                                                  ? Image.network(prod.imagePath, fit: BoxFit.cover, width: double.infinity)
+                                                  : Image.asset(
+                                                      prod.imagePath.isNotEmpty ? prod.imagePath : 'assets/images/profile_placeholder.png',
+                                                      fit: BoxFit.cover,
+                                                      width: double.infinity,
+                                                    ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  prod.name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.darkNavy),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  prod.price,
+                                                  style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: 11),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             );
                           },
@@ -655,8 +761,8 @@ class _DetailPageState extends State<DetailPage> {
                 ),
                 const SizedBox(width: 15),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: isProductProcessing
+                  child: GestureDetector(
+                    onTap: isProductProcessing
                         ? null
                         : () {
                             final currentUser = _auth.currentUser;
@@ -685,33 +791,17 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                             );
                           },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isProductProcessing ? Colors.grey : null,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ).copyWith(
-                      // Gunakan gradasi navy melingkar
-                      backgroundColor: WidgetStateProperty.resolveWith((states) {
-                        if (isProductProcessing) return Colors.grey;
-                        return null; // biarkan default agar bisa dilapisi gradasi jika diset
-                      }),
-                    ),
                     child: Container(
-                      width: double.infinity,
-                      height: double.infinity,
+                      height: 50,
                       alignment: Alignment.center,
-                      decoration: isProductProcessing
-                          ? null
-                          : BoxDecoration(
-                              gradient: AppTheme.primaryGradient,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: AppTheme.glowShadow(color: AppTheme.primaryBlue),
-                            ),
+                      decoration: BoxDecoration(
+                        gradient: isProductProcessing ? null : AppTheme.primaryGradient,
+                        color: isProductProcessing ? Colors.grey : null,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: isProductProcessing ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
+                      ),
                       child: Text(
-                        isProductProcessing ? "On Processing" : "Beli Sekarang",
+                        isProductProcessing ? "Diproses" : "Beli Sekarang",
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

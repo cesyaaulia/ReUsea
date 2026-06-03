@@ -205,3 +205,147 @@ class OceanGradientBackground extends StatelessWidget {
     );
   }
 }
+
+// ============================================================================
+// CUSTOM PAINTER: REUSEA LOGO
+// Paints a custom vector R with wave caps below it
+// ============================================================================
+class ReUseaLogoPainter extends CustomPainter {
+  final bool showBackground;
+  ReUseaLogoPainter({this.showBackground = true});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+
+    canvas.save();
+    canvas.scale(w / 100, h / 100);
+
+    if (showBackground) {
+      final Paint bgPaint = Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF1A2295), Color(0xFF263759)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(const Rect.fromLTWH(0, 0, 100, 100));
+
+      final RRect rrect = RRect.fromRectAndRadius(
+        const Rect.fromLTWH(0, 0, 100, 100),
+        const Radius.circular(28),
+      );
+      canvas.drawRRect(rrect, bgPaint);
+
+      // Draw border
+      final Paint borderPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.12)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawRRect(rrect, borderPaint);
+    }
+
+    // Paint stylized 'R' in White
+    final Paint rPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    // Stem (Vertical bar)
+    final Path rPath = Path();
+    rPath.moveTo(22, 18);
+    rPath.lineTo(34, 18);
+    rPath.lineTo(34, 82);
+    rPath.lineTo(22, 82);
+    rPath.close();
+    canvas.drawPath(rPath, rPaint);
+
+    // Loop
+    final Path loopOuter = Path();
+    loopOuter.moveTo(34, 18);
+    loopOuter.cubicTo(66, 18, 76, 22, 76, 36);
+    loopOuter.cubicTo(76, 50, 66, 54, 34, 54);
+    loopOuter.close();
+
+    final Path loopInner = Path();
+    loopInner.moveTo(34, 28);
+    loopInner.cubicTo(56, 28, 64, 30, 64, 36);
+    loopInner.cubicTo(64, 42, 56, 44, 34, 44);
+    loopInner.close();
+
+    // R Loop: Outer minus Inner
+    final Path loopCombined = Path.combine(PathOperation.difference, loopOuter, loopInner);
+    canvas.drawPath(loopCombined, rPaint);
+
+    // Leg (Wave-like sweeping tail)
+    final Path legPath = Path();
+    legPath.moveTo(34, 50);
+    legPath.cubicTo(46, 50, 68, 70, 78, 80);
+    legPath.lineTo(62, 82);
+    legPath.cubicTo(52, 72, 42, 62, 34, 60);
+    legPath.close();
+    canvas.drawPath(legPath, rPaint);
+
+    // Bottom Waves (overlapping the R)
+    // Wave 1: Darker teal/blue wave
+    final Paint wave1Paint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF2E86DE), Color(0xFF00D2D3)],
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+      ).createShader(const Rect.fromLTWH(0, 50, 100, 50));
+
+    final Path wave1Path = Path();
+    wave1Path.moveTo(0, 78);
+    wave1Path.cubicTo(25, 68, 45, 92, 75, 78);
+    wave1Path.cubicTo(85, 73, 95, 75, 100, 78);
+    wave1Path.lineTo(100, 100);
+    wave1Path.lineTo(0, 100);
+    wave1Path.close();
+
+    // Clip to rounded rect if showBackground is true
+    if (showBackground) {
+      canvas.save();
+      final Path clipPath = Path()
+        ..addRRect(RRect.fromRectAndRadius(
+          const Rect.fromLTWH(0, 0, 100, 100),
+          const Radius.circular(28),
+        ));
+      canvas.clipPath(clipPath);
+      canvas.drawPath(wave1Path, wave1Paint);
+      canvas.restore();
+    } else {
+      canvas.drawPath(wave1Path, wave1Paint);
+    }
+
+    // Wave 2: White cap wave
+    final Paint wave2Paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.9);
+
+    final Path wave2Path = Path();
+    wave2Path.moveTo(0, 84);
+    wave2Path.cubicTo(30, 74, 50, 94, 80, 82);
+    wave2Path.cubicTo(90, 78, 95, 80, 100, 82);
+    wave2Path.lineTo(100, 100);
+    wave2Path.lineTo(0, 100);
+    wave2Path.close();
+
+    if (showBackground) {
+      canvas.save();
+      final Path clipPath = Path()
+        ..addRRect(RRect.fromRectAndRadius(
+          const Rect.fromLTWH(0, 0, 100, 100),
+          const Radius.circular(28),
+        ));
+      canvas.clipPath(clipPath);
+      canvas.drawPath(wave2Path, wave2Paint);
+      canvas.restore();
+    } else {
+      canvas.drawPath(wave2Path, wave2Paint);
+    }
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

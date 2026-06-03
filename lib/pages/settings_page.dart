@@ -4,6 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:reusea/services/auth_service.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:reusea/utils/page_transitions.dart';
+
+// Import New Pages
+import 'edit_profile_page.dart';
+import 'contact_us_page.dart';
+import 'feedback_page.dart';
+import 'past_buys_page.dart';
+import 'past_sells_page.dart';
+import 'landing_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -150,6 +159,202 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  void _showPrivacyPolicy(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          "Kebijakan Privasi",
+          style: GoogleFonts.lexend(fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+        ),
+        content: SingleChildScrollView(
+          child: Text(
+            "ReUsea berkomitmen menjaga kerahasiaan data pribadi mahasiswa UNESA. Data seperti Nama, Email Mahasiswa, dan Nomor WhatsApp hanya digunakan untuk keperluan transaksi COD di lingkungan kampus dan tidak akan disebarluaskan kepada pihak ketiga tanpa izin.",
+            style: GoogleFonts.lexend(fontSize: 13, color: AppTheme.secondaryBlue, height: 1.5),
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: Text("Tutup", style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsAndConditions(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          "Syarat & Ketentuan",
+          style: GoogleFonts.lexend(fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+        ),
+        content: SingleChildScrollView(
+          child: Text(
+            "1. Transaksi hanya diperbolehkan bagi Civitas Akademika UNESA.\n2. Pertemuan transaksi (COD) wajib dilakukan di area publik kampus demi keamanan.\n3. Barang yang dijual harus halal, legal, dan sesuai deskripsi kondisi asli.\n4. ReUsea tidak bertanggung jawab atas kerugian transaksi langsung antar pengguna.",
+            style: GoogleFonts.lexend(fontSize: 13, color: AppTheme.secondaryBlue, height: 1.5),
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: Text("Tutup", style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFAQ(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          "FAQ / Pertanyaan Umum",
+          style: GoogleFonts.lexend(fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Q: Bagaimana sistem pembayarannya?",
+                style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.darkNavy),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "A: Pembayaran dilakukan secara Cash on Delivery (COD) langsung saat bertemu penjual di kampus.",
+                style: GoogleFonts.lexend(fontSize: 11, color: AppTheme.secondaryBlue),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Q: Dimana lokasi COD yang aman?",
+                style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.darkNavy),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "A: Di tempat ramai seperti Rektorat, Perpustakaan, Gazebo Fakultas, atau Kantin Kampus.",
+                style: GoogleFonts.lexend(fontSize: 11, color: AppTheme.secondaryBlue),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: Text("Mengerti", style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _reportIssue(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          "Laporkan Masalah",
+          style: GoogleFonts.lexend(fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+        ),
+        content: Text(
+          "Apakah Anda menemukan kendala teknis atau pengguna yang melanggar aturan? Silakan hubungi admin ReUsea melalui menu Hubungi Kami.",
+          style: GoogleFonts.lexend(fontSize: 13, color: AppTheme.secondaryBlue, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Batal", style: GoogleFonts.lexend(color: AppTheme.secondaryBlue)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                SlideFadeRightRoute(page: const ContactUsPage()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: Text("Hubungi", style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _logoutUser(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          "Keluar Akun",
+          style: GoogleFonts.lexend(fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+        ),
+        content: Text(
+          "Apakah Anda yakin ingin keluar dari aplikasi ReUsea?",
+          style: GoogleFonts.lexend(fontSize: 14, color: AppTheme.secondaryBlue),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Batal", style: GoogleFonts.lexend(color: AppTheme.secondaryBlue, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await AuthService().logout();
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LandingPage()),
+                  (route) => false,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: Text("Keluar", style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -186,7 +391,7 @@ class SettingsPage extends StatelessWidget {
                       ),
                       const SizedBox(width: 16),
                       Text(
-                        'Settings',
+                        'Pengaturan',
                         style: GoogleFonts.lexend(
                           color: AppTheme.darkNavy,
                           fontSize: 24,
@@ -271,72 +476,215 @@ class SettingsPage extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 28),
+
+                  // =================== SECTION: AKUN ===================
+                  _buildSectionHeader("AKUN"),
+                  _buildSettingsGroup([
+                    _buildSettingsTile(
+                      icon: Icons.person_outline_rounded,
+                      title: 'Edit Profil',
+                      bgIconColor: Colors.purple.withValues(alpha: 0.1),
+                      iconColor: Colors.purple,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideFadeRightRoute(page: const EditProfilePage()),
+                        );
+                      },
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.shopping_bag_outlined,
+                      title: 'Riwayat Pembelian',
+                      bgIconColor: Colors.green.withValues(alpha: 0.1),
+                      iconColor: Colors.green,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideFadeRightRoute(page: const PastBuysPage()),
+                        );
+                      },
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.sell_outlined,
+                      title: 'Riwayat Penjualan',
+                      bgIconColor: Colors.orange.withValues(alpha: 0.1),
+                      iconColor: Colors.orange,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideFadeRightRoute(page: const PastSellsPage()),
+                        );
+                      },
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.notifications_none_rounded,
+                      title: 'Notifikasi',
+                      bgIconColor: Colors.blue.withValues(alpha: 0.1),
+                      iconColor: Colors.blue,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideFadeRightRoute(page: const NotificationSettingsPage()),
+                        );
+                      },
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.verified_user_outlined,
+                      title: 'Keamanan & Kata Sandi',
+                      bgIconColor: AppTheme.sunsetOrange.withValues(alpha: 0.1),
+                      iconColor: AppTheme.sunsetOrange,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideFadeRightRoute(page: const SecuritySettingsPage()),
+                        );
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 20),
+
+                  // =================== SECTION: DUKUNGAN ===================
+                  _buildSectionHeader("DUKUNGAN"),
+                  _buildSettingsGroup([
+                    _buildSettingsTile(
+                      icon: Icons.contact_support_outlined,
+                      title: 'Hubungi Kami',
+                      bgIconColor: Colors.teal.withValues(alpha: 0.1),
+                      iconColor: Colors.teal,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideFadeRightRoute(page: const ContactUsPage()),
+                        );
+                      },
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.rate_review_outlined,
+                      title: 'Kritik & Saran',
+                      bgIconColor: Colors.amber.withValues(alpha: 0.1),
+                      iconColor: Colors.amber,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideFadeRightRoute(page: const FeedbackPage()),
+                        );
+                      },
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.report_problem_outlined,
+                      title: 'Laporkan Masalah',
+                      bgIconColor: Colors.redAccent.withValues(alpha: 0.1),
+                      iconColor: Colors.redAccent,
+                      onTap: () => _reportIssue(context),
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.question_answer_outlined,
+                      title: 'FAQ',
+                      bgIconColor: Colors.indigo.withValues(alpha: 0.1),
+                      iconColor: Colors.indigo,
+                      onTap: () => _showFAQ(context),
+                    ),
+                  ]),
+                  const SizedBox(height: 20),
+
+                  // =================== SECTION: APLIKASI ===================
+                  _buildSectionHeader("APLIKASI"),
+                  _buildSettingsGroup([
+                    _buildSettingsTile(
+                      icon: Icons.info_outline_rounded,
+                      title: 'Tentang ReUsea',
+                      bgIconColor: AppTheme.secondaryBlue.withValues(alpha: 0.1),
+                      iconColor: AppTheme.secondaryBlue,
+                      onTap: () => _showAboutAppDialog(context),
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.privacy_tip_outlined,
+                      title: 'Kebijakan Privasi',
+                      bgIconColor: Colors.blueGrey.withValues(alpha: 0.1),
+                      iconColor: Colors.blueGrey,
+                      onTap: () => _showPrivacyPolicy(context),
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.gavel_outlined,
+                      title: 'Syarat & Ketentuan',
+                      bgIconColor: Colors.brown.withValues(alpha: 0.1),
+                      iconColor: Colors.brown,
+                      onTap: () => _showTermsAndConditions(context),
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.cloud_upload_outlined,
+                      title: 'Seed Dummy Products',
+                      bgIconColor: AppTheme.ecoTeal.withValues(alpha: 0.1),
+                      iconColor: AppTheme.ecoTeal,
+                      onTap: () => _showSeedDialog(context),
+                    ),
+                  ]),
                   const SizedBox(height: 24),
 
-                  // Settings Grouped Menu List
+                  // =================== SECTION: AKSI AKUN ===================
                   Container(
+                    width: double.infinity,
+                    height: 52,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: AppTheme.softShadow(),
-                      border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
+                      color: Colors.redAccent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
                     ),
-                    child: Column(
-                      children: [
-                        _buildSettingsTile(
-                          icon: Icons.notifications_none_rounded,
-                          title: 'Push Notifications',
-                          bgIconColor: Colors.blue.withValues(alpha: 0.1),
-                          iconColor: Colors.blue,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const NotificationSettingsPage(),
-                              ),
-                            );
-                          },
+                    child: TextButton.icon(
+                      onPressed: () => _logoutUser(context),
+                      icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                      label: Text(
+                        'Keluar Akun',
+                        style: GoogleFonts.lexend(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
-                        const Divider(height: 1, color: AppTheme.bgLight, indent: 64),
-                        _buildSettingsTile(
-                          icon: Icons.verified_user_outlined,
-                          title: 'Security & Password',
-                          bgIconColor: AppTheme.sunsetOrange.withValues(alpha: 0.1),
-                          iconColor: AppTheme.sunsetOrange,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SecuritySettingsPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        const Divider(height: 1, color: AppTheme.bgLight, indent: 64),
-                        _buildSettingsTile(
-                          icon: Icons.info_outline_rounded,
-                          title: 'About App',
-                          bgIconColor: AppTheme.secondaryBlue.withValues(alpha: 0.1),
-                          iconColor: AppTheme.secondaryBlue,
-                          onTap: () => _showAboutAppDialog(context),
-                        ),
-                        const Divider(height: 1, color: AppTheme.bgLight, indent: 64),
-                        _buildSettingsTile(
-                          icon: Icons.cloud_upload_outlined,
-                          title: 'Seed Dummy Products',
-                          bgIconColor: AppTheme.ecoTeal.withValues(alpha: 0.1),
-                          iconColor: AppTheme.ecoTeal,
-                          onTap: () => _showSeedDialog(context),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+      child: Text(
+        title,
+        style: GoogleFonts.lexend(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          color: AppTheme.secondaryBlue,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsGroup(List<Widget> children) {
+    List<Widget> items = [];
+    for (int i = 0; i < children.length; i++) {
+      items.add(children[i]);
+      if (i < children.length - 1) {
+        items.add(const Divider(height: 1, color: AppTheme.bgLight, indent: 64));
+      }
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.softShadow(),
+        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
+      ),
+      child: Column(children: items),
     );
   }
 

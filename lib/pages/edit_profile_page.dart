@@ -22,6 +22,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _facultyController;
+  late TextEditingController _bioController;
+  late TextEditingController _phoneController;
+  late TextEditingController _pickupController;
+  late TextEditingController _socialController;
 
   Uint8List? _imageBytes; // Menampung data foto baru dalam bentuk byte
   bool _isLoading = false;
@@ -36,6 +40,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _nameController = TextEditingController(text: currentName);
     _emailController = TextEditingController(text: currentEmail);
     _facultyController = TextEditingController();
+    _bioController = TextEditingController();
+    _phoneController = TextEditingController();
+    _pickupController = TextEditingController(text: 'Bebas / Fleksibel');
+    _socialController = TextEditingController();
 
     if (user != null) {
       _firestore.collection('users').doc(user.uid).get().then((doc) {
@@ -43,6 +51,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           var data = doc.data() as Map<String, dynamic>;
           setState(() {
             _facultyController.text = data['faculty'] ?? '';
+            _bioController.text = data['bio'] ?? '';
+            _phoneController.text = data['phone'] ?? '';
+            _pickupController.text = data['pickupPreference'] ?? 'Bebas / Fleksibel';
+            _socialController.text = data['socialLinks'] ?? '';
           });
         }
       });
@@ -54,6 +66,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _nameController.dispose();
     _emailController.dispose();
     _facultyController.dispose();
+    _bioController.dispose();
+    _phoneController.dispose();
+    _pickupController.dispose();
+    _socialController.dispose();
     super.dispose();
   }
 
@@ -82,6 +98,85 @@ class _EditProfilePageState extends State<EditProfilePage> {
         );
       }
     }
+  }
+
+  void _showSuccessDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: "Success",
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim1, curve: Curves.bounceOut),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+            backgroundColor: Colors.white,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.ecoTeal.withValues(alpha: 0.1),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppTheme.ecoTeal,
+                    size: 60,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Berhasil Disimpan!",
+                  style: GoogleFonts.lexend(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.darkNavy,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Profil Anda telah diperbarui di database ReUsea.",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.lexend(
+                    fontSize: 13,
+                    color: AppTheme.secondaryBlue,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Tutup dialog
+                      Navigator.pop(context); // Kembali ke halaman sebelumnya
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      "Selesai",
+                      style: GoogleFonts.lexend(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Fungsi utama menyimpan perubahan ke Auth dan Firestore (Sync Live)
@@ -125,6 +220,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'photoUrl': downloadUrl,
           'email': user.email,
           'faculty': _facultyController.text.trim(),
+          'bio': _bioController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'pickupPreference': _pickupController.text.trim(),
+          'socialLinks': _socialController.text.trim(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
@@ -164,15 +263,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         }
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Profil berhasil diperbarui!", style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
-              backgroundColor: AppTheme.ecoTeal,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            ),
-          );
-          Navigator.pop(context); // Kembali ke halaman Profile
+          _showSuccessDialog();
         }
       }
     } catch (e) {
@@ -307,9 +398,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   const SizedBox(height: 20),
 
                   _buildInputField(
+                    label: "BIO SINGKAT",
+                    controller: _bioController,
+                    hint: "Tuliskan bio singkat atau info tentang diri Anda",
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildInputField(
                     label: "FAKULTAS / JURUSAN",
                     controller: _facultyController,
                     hint: "Contoh: Fakultas Teknik / S1 Informatika",
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildInputField(
+                    label: "NOMOR WHATSAPP",
+                    controller: _phoneController,
+                    hint: "Contoh: 081234567890",
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildInputField(
+                    label: "PREFERENSI PENGAMBILAN (COD)",
+                    controller: _pickupController,
+                    hint: "Contoh: Rektorat UNESA, Lidah Wetan, Ketintang",
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildInputField(
+                    label: "LINK SOSIAL MEDIA (Opsional)",
+                    controller: _socialController,
+                    hint: "Contoh: instagram.com/username",
                   ),
                   const SizedBox(height: 20),
 
@@ -395,6 +515,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     required TextEditingController controller,
     required String hint,
     bool readOnly = false,
+    int maxLines = 1,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,6 +535,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         TextField(
           controller: controller,
           readOnly: readOnly,
+          maxLines: maxLines,
           style: GoogleFonts.lexend(
             fontSize: 14,
             fontWeight: FontWeight.bold,

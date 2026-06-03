@@ -1,10 +1,15 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/services/delivery_service.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/widgets/rating_modal.dart';
+import '../models/product_model.dart';
+import 'chat_detail_page.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final Map<String, dynamic> orderData;
@@ -39,10 +44,14 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Pesanan berhasil diperbarui: $newStatus"),
-            backgroundColor: newStatus == 'Completed'
-                ? Colors.green
-                : Colors.red,
+            content: Text(
+              newStatus == 'Completed'
+                  ? "Transaksi Berhasil Diselesaikan! 🥳"
+                  : "Transaksi Berhasil Dibatalkan.",
+              style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: newStatus == 'Completed' ? AppTheme.ecoTeal : Colors.red,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -69,6 +78,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           SnackBar(
             content: Text("Gagal memperbarui status: $e"),
             backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -77,6 +87,172 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _navigateToChat(Map<String, dynamic> item) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    final String sellerId = item['sellerId'] ?? '';
+    if (sellerId.isEmpty) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+      ),
+    );
+
+    try {
+      String buyerName = currentUser.displayName ?? currentUser.email!.split('@')[0];
+      String buyerPhoto = currentUser.photoURL ?? '';
+
+      String roomId = await _dbService.getOrCreateChatRoom(
+        buyerId: currentUser.uid,
+        buyerName: buyerName,
+        buyerPhoto: buyerPhoto,
+        sellerId: sellerId,
+        sellerName: item['sellerName'] ?? 'Penjual UNESA',
+        sellerPhoto: item['sellerPhoto'] ?? '',
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      Product dummyProd = Product(
+        id: item['productId'] ?? '',
+        sellerId: sellerId,
+        sellerName: item['sellerName'] ?? 'Penjual UNESA',
+        sellerPhoto: item['sellerPhoto'] ?? '',
+        name: item['name'] ?? '',
+        price: item['price'] ?? '',
+        imagePath: item['imagePath'] ?? '',
+        imageUrls: item['imagePath'] != null ? [item['imagePath']] : [],
+        category: '',
+        condition: '',
+        description: '',
+        location: item['location'] ?? '',
+        time: '',
+        status: item['status'] ?? 'Available',
+      );
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          SlideFadeRightRoute(
+            page: ChatDetailPage(
+              roomId: roomId,
+              peerId: sellerId,
+              peerName: item['sellerName'] ?? 'Penjual UNESA',
+              peerPhoto: item['sellerPhoto'] ?? '',
+              product: dummyProd,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal membuka chat: $e"),
+            backgroundColor: AppTheme.coralPeach,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildTimeline(String status) {
+    int currentStep = 0;
+    if (status == 'Completed' || status == 'Cancelled') {
+      currentStep = 2;
+    } else if (status == 'Processing') {
+      currentStep = 1;
+    }
+
+    Color stepColor(int step) {
+      if (status == 'Cancelled' && step == 2) return AppTheme.coralPeach;
+      return step <= currentStep ? AppTheme.ecoTeal : AppTheme.lightBlueGrey;
+    }
+
+    String stepLabel(int step) {
+      if (step == 0) return "Dipesan";
+      if (step == 1) return "Diproses COD";
+      if (step == 2) {
+        return status == 'Cancelled' ? "Batal" : "Selesai";
+      }
+      return "";
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.softShadow(),
+        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Timeline Transaksi",
+            style: GoogleFonts.lexend(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(3, (index) {
+              return Expanded(
+                child: Row(
+                  children: [
+                    Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: stepColor(index),
+                          child: Icon(
+                            index <= currentStep
+                                ? (status == 'Cancelled' && index == 2
+                                    ? Icons.close_rounded
+                                    : Icons.check_rounded)
+                                : Icons.circle_rounded,
+                            color: Colors.white,
+                            size: index <= currentStep ? 16 : 8,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          stepLabel(index),
+                          style: GoogleFonts.lexend(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: stepColor(index),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (index < 2)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 18),
+                          child: Container(
+                            height: 3,
+                            color: index < currentStep
+                                ? AppTheme.ecoTeal
+                                : AppTheme.lightBlueGrey.withValues(alpha: 0.3),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -100,419 +276,263 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         final bool isBuyer = currentUserId == buyerId;
         final bool isReviewed = item['isReviewed'] ?? false;
 
-        Color statusBgColor;
-        Color statusTextColor;
-        switch (_currentStatus) {
-          case 'Completed':
-            statusBgColor = const Color(0xFFE8F5E9);
-            statusTextColor = const Color(0xFF2E7D32);
-            break;
-          case 'Cancelled':
-            statusBgColor = const Color(0xFFFFEBEE);
-            statusTextColor = const Color(0xFFC62828);
-            break;
-          case 'Processing':
-          default:
-            statusBgColor = const Color(0xFFE3F2FD);
-            statusTextColor = const Color(0xFF1565C0);
-            break;
+        Color badgeColor;
+        String statusIndo;
+        if (_currentStatus == 'Completed') {
+          badgeColor = AppTheme.ecoTeal;
+          statusIndo = "Selesai";
+        } else if (_currentStatus == 'Cancelled') {
+          badgeColor = AppTheme.coralPeach;
+          statusIndo = "Batal";
+        } else {
+          badgeColor = AppTheme.sunsetOrange;
+          statusIndo = "Diproses";
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF2F1EE),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFFF2F1EE),
-            elevation: 0,
-            centerTitle: true,
-            leading: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
-                color: Colors.black,
-                size: 20,
-              ),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: const Text(
-              'Order Detail',
-              style: TextStyle(
-                color: Color(0xFF1E293B),
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(1),
-              child: Container(
-                color: Colors.grey.withValues(alpha: 0.1),
-                height: 1,
-              ),
-            ),
-          ),
-          body: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF1A2235)),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 1. STATUS CARD
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'STATUS',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                letterSpacing: 1.1,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: statusBgColor,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                _currentStatus,
-                                style: TextStyle(
-                                  color: statusTextColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 2. MAIN DETAILS CARD
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              height: 320,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF2F1EE),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.all(16),
-                              child: Center(
-                                child:
-                                    item['imagePath'] != null &&
-                                        item['imagePath'].startsWith('http')
-                                    ? Image.network(
-                                        item['imagePath'],
-                                        fit: BoxFit.contain,
-                                      )
-                                    : const Icon(
-                                        Icons.shopping_bag_outlined,
-                                        color: Color(0xFF1A2235),
-                                        size: 100,
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              item['name'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E293B),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Seller: ${item['sellerName'] ?? 'Mahasiswa UNESA'}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              item['price'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                color: Color(0xFF1A2235),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 3. PICKUP LOCATION CARD
-                      const Text(
-                        'Pickup Location',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF2F1EE),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+          body: OceanGradientBackground(
+            child: SafeArea(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header Row
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                           child: Row(
                             children: [
-                              const CircleAvatar(
-                                backgroundColor: Color(0xFFE2E8F0),
-                                child: Icon(
-                                  Icons.location_on,
-                                  color: Color(0xFF1A2235),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: AppTheme.softShadow(),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    color: AppTheme.darkNavy,
+                                    size: 18,
+                                  ),
+                                  onPressed: () => Navigator.pop(context),
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['location'] ?? 'UNESA Lidah Wetan',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: Color(0xFF1E293B),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    const Text(
-                                      'Surabaya, East Java',
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
+                              Text(
+                                'Detail Pembelian',
+                                style: GoogleFonts.lexend(
+                                  color: AppTheme.darkNavy,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
 
-                      // 3b. DELIVERY INFO CARD
-                      if (deliveryService.isNotEmpty) ...[
-                        const Text(
-                          'Delivery Info',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.03),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Jasa Pengiriman Box Logo
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: deliveryService.contains('COD')
-                                      ? const Color(0xFFE8F5E9)
-                                      : const Color(0xFFE8F5E9),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      deliveryService == 'GoSend'
-                                          ? Icons.two_wheeler
-                                          : (deliveryService == 'Grab Express'
-                                                ? Icons.delivery_dining
-                                                : Icons.people_outline),
-                                      color: deliveryService == 'GoSend'
-                                          ? const Color(0xFF00880F)
-                                          : (deliveryService == 'Grab Express'
-                                                ? const Color(0xFF00B14F)
-                                                : const Color(0xFF00B359)),
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            deliveryService,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              color: deliveryService == 'GoSend'
-                                                  ? const Color(0xFF00880F)
-                                                  : (deliveryService ==
-                                                            'Grab Express'
-                                                        ? const Color(0xFF00B14F)
-                                                        : const Color(0xFF00B359)),
-                                            ),
-                                          ),
-                                          if (item['distanceKm'] != null &&
-                                              !deliveryService.contains('COD'))
-                                            Text(
-                                              'Jarak: ${(item['distanceKm'] as num).toStringAsFixed(1)} km',
-                                              style: const TextStyle(
-                                                color: Colors.grey,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          if (deliveryService.contains('COD'))
-                                            const Text(
-                                              'Metode: Tatap Muka Langsung',
-                                              style: TextStyle(
-                                                color: Colors.grey,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (item['deliveryFee'] != null)
-                                      Text(
-                                        deliveryService.contains('COD')
-                                            ? 'Gratis'
-                                            : DeliveryService.formatRupiah(
-                                                (item['deliveryFee'] as num)
-                                                    .toDouble(),
-                                              ),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Color(0xFF1E293B),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 1. TIMELINE STATUS
+                                _buildTimeline(_currentStatus),
+                                const SizedBox(height: 20),
+
+                                // 2. PRODUCT DETAIL CARD
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(28),
+                                    boxShadow: AppTheme.softShadow(),
+                                    border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Product Image Container
+                                      Container(
+                                        width: double.infinity,
+                                        height: 200,
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.bgLight,
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(20),
+                                          child: item['imagePath'] != null && item['imagePath'].startsWith('http')
+                                              ? Image.network(item['imagePath'], fit: BoxFit.cover)
+                                              : Image.asset(
+                                                  item['imagePath'] != null && item['imagePath'].isNotEmpty
+                                                      ? item['imagePath']
+                                                      : 'assets/images/profile_placeholder.png',
+                                                  fit: BoxFit.cover,
+                                                ),
                                         ),
                                       ),
-                                  ],
+                                      const SizedBox(height: 18),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: badgeColor.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              statusIndo,
+                                              style: GoogleFonts.lexend(
+                                                color: badgeColor,
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            item['time'] ?? '',
+                                            style: GoogleFonts.lexend(color: AppTheme.secondaryBlue, fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        item['name'] ?? '',
+                                        style: GoogleFonts.lexend(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                          color: AppTheme.darkNavy,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item['price'] ?? '',
+                                        style: GoogleFonts.lexend(
+                                          fontSize: 20,
+                                          color: AppTheme.primaryBlue,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              // Alamat Pengiriman / Status Lokasi COD
-                              if (item['buyerAddress'] != null &&
-                                  (item['buyerAddress'] as String).isNotEmpty) ...[
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 20),
+
+                                // 3. SELLER CARD
+                                Text(
+                                  "Informasi Penjual",
+                                  style: GoogleFonts.lexend(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+                                ),
+                                const SizedBox(height: 10),
+                                FutureBuilder<DocumentSnapshot?>(
+                                  future: item['sellerId'] != null && (item['sellerId'] as String).isNotEmpty
+                                      ? FirebaseFirestore.instance.collection('users').doc(item['sellerId']).get()
+                                      : Future<DocumentSnapshot?>.value(null),
+                                  builder: (context, sellerSnap) {
+                                    var userData = sellerSnap.data != null && sellerSnap.data!.exists
+                                        ? sellerSnap.data!.data() as Map<String, dynamic>?
+                                        : null;
+
+                                    String sName = userData?['name'] ?? item['sellerName'] ?? 'Penjual UNESA';
+                                    String sPhoto = userData?['photoUrl'] ?? item['sellerPhoto'] ?? '';
+                                    double avgRating = (userData?['averageRating'] ?? 4.8).toDouble();
+
+                                    return Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(24),
+                                        boxShadow: AppTheme.softShadow(),
+                                        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 26,
+                                            backgroundColor: AppTheme.bgLight,
+                                            backgroundImage: sPhoto.isNotEmpty ? NetworkImage(sPhoto) : null,
+                                            child: sPhoto.isEmpty ? const Icon(Icons.person_rounded, color: AppTheme.secondaryBlue) : null,
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  sName,
+                                                  style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.darkNavy),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    const Icon(Icons.star_rounded, color: AppTheme.sunYellow, size: 16),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      avgRating.toStringAsFixed(1),
+                                                      style: GoogleFonts.lexend(color: AppTheme.secondaryBlue, fontSize: 12, fontWeight: FontWeight.bold),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      "Joined: ${userData?['joinedAt'] ?? 'Januari 2026'}",
+                                                      style: GoogleFonts.lexend(color: AppTheme.lightBlueGrey, fontSize: 11),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          IconButton(
+                                            onPressed: () => _navigateToChat(item),
+                                            icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.primaryBlue),
+                                            style: IconButton.styleFrom(
+                                              backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                                              padding: const EdgeInsets.all(12),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+
+                                // 4. PICKUP LOCATION CARD
+                                Text(
+                                  "Lokasi Pengambilan COD",
+                                  style: GoogleFonts.lexend(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+                                ),
+                                const SizedBox(height: 10),
                                 Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF2F1EE),
-                                    borderRadius: BorderRadius.circular(12),
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: AppTheme.softShadow(),
+                                    border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
                                   ),
                                   child: Row(
                                     children: [
-                                      CircleAvatar(
-                                        backgroundColor:
-                                            deliveryService.contains('COD')
-                                            ? const Color(0xFFE8F5E9)
-                                            : const Color(0xFFE3F2FD),
-                                        radius: 18,
-                                        child: Icon(
-                                          deliveryService.contains('COD')
-                                              ? Icons.handshake_outlined
-                                              : Icons.home,
-                                          color: deliveryService.contains('COD')
-                                              ? const Color(0xFF00B359)
-                                              : const Color(0xFF1565C0),
-                                          size: 18,
-                                        ),
+                                      const CircleAvatar(
+                                        backgroundColor: AppTheme.bgLight,
+                                        child: Icon(Icons.location_on_rounded, color: AppTheme.primaryBlue),
                                       ),
-                                      const SizedBox(width: 12),
+                                      const SizedBox(width: 14),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              deliveryService.contains('COD')
-                                                  ? 'Lokasi Serah Terima'
-                                                  : 'Alamat Pengiriman',
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.grey,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                              item['location'] ?? 'UNESA Lidah Wetan',
+                                              style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.darkNavy),
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              item['buyerAddress'],
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 13,
-                                                color: Color(0xFF1E293B),
-                                              ),
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis,
+                                              "Surabaya, East Java",
+                                              style: GoogleFonts.lexend(color: AppTheme.secondaryBlue, fontSize: 11),
                                             ),
                                           ],
                                         ),
@@ -520,148 +540,139 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                     ],
                                   ),
                                 ),
-                              ],
+                                const SizedBox(height: 20),
 
-                              if (deliveryService == 'GoSend' ||
-                                  deliveryService == 'Grab Express') ...[
-                                const SizedBox(height: 14),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 48,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      if (deliveryService == 'GoSend') {
-                                        DeliveryService.openGojekApp();
-                                      } else {
-                                        DeliveryService.openGrabApp();
-                                      }
-                                    },
-                                    icon: Icon(
-                                      deliveryService == 'GoSend'
-                                          ? Icons.two_wheeler
-                                          : Icons.delivery_dining,
+                                // 5. DELIVERY INFO CARD (IF APPLICABLE)
+                                if (deliveryService.isNotEmpty) ...[
+                                  Text(
+                                    "Detail Pengiriman",
+                                    style: GoogleFonts.lexend(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
                                       color: Colors.white,
-                                      size: 20,
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: AppTheme.softShadow(),
+                                      border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
                                     ),
-                                    label: Text(
-                                      'Buka ${deliveryService == 'GoSend' ? 'Gojek' : 'Grab'}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              deliveryService == 'GoSend'
+                                                  ? Icons.two_wheeler_rounded
+                                                  : (deliveryService == 'Grab Express'
+                                                      ? Icons.delivery_dining_rounded
+                                                      : Icons.people_outline_rounded),
+                                              color: AppTheme.ecoTeal,
+                                              size: 24,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    deliveryService,
+                                                    style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.darkNavy),
+                                                  ),
+                                                  if (item['distanceKm'] != null && !deliveryService.contains('COD'))
+                                                    Text(
+                                                      'Jarak: ${(item['distanceKm'] as num).toStringAsFixed(1)} km',
+                                                      style: GoogleFonts.lexend(color: AppTheme.secondaryBlue, fontSize: 11),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (item['deliveryFee'] != null)
+                                              Text(
+                                                deliveryService.contains('COD')
+                                                    ? 'Gratis'
+                                                    : DeliveryService.formatRupiah((item['deliveryFee'] as num).toDouble()),
+                                                style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.darkNavy),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 30),
+                                ],
+
+                                // 6. ACTION BUTTONS
+                                if (_currentStatus == 'Processing')
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: SizedBox(
+                                          height: 52,
+                                          child: TextButton.icon(
+                                            onPressed: () => _updateStatus('Cancelled'),
+                                            icon: const Icon(Icons.cancel_outlined, color: Colors.white),
+                                            label: Text(
+                                              'Batalkan',
+                                              style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                            ),
+                                            style: TextButton.styleFrom(
+                                              backgroundColor: AppTheme.coralPeach,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: deliveryService == 'GoSend'
-                                          ? const Color(0xFF00880F)
-                                          : const Color(0xFF00B14F),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: SizedBox(
+                                          height: 52,
+                                          child: TextButton.icon(
+                                            onPressed: () => _updateStatus('Completed'),
+                                            icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+                                            label: Text(
+                                              'Selesaikan',
+                                              style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                            ),
+                                            style: TextButton.styleFrom(
+                                              backgroundColor: AppTheme.ecoTeal,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else if (_currentStatus == 'Completed' && isBuyer && !isReviewed)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 52,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () async {
+                                        await RatingModal.show(context, item);
+                                      },
+                                      icon: const Icon(Icons.star_rate_rounded, color: Colors.white),
+                                      label: Text(
+                                        'Beri Ulasan Penjual',
+                                        style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.sunsetOrange,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        elevation: 0,
                                       ),
                                     ),
                                   ),
-                                ),
+                                const SizedBox(height: 40),
                               ],
-                            ],
+                            ),
                           ),
                         ),
                       ],
-                      const SizedBox(height: 16),
-
-                      // 4. ACTION BUTTONS BAR (Tombol Selesai & Batal Pesanan atau Beri Ulasan)
-                      if (_currentStatus == 'Processing')
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SizedBox(
-                                height: 55,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _updateStatus('Cancelled'),
-                                  icon: const Icon(
-                                    Icons.cancel_outlined,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text(
-                                    'Cancel Order',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFC62828),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: SizedBox(
-                                height: 55,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _updateStatus('Completed'),
-                                  icon: const Icon(
-                                    Icons.check_circle_outline,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text(
-                                    'Complete Order',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2E7D32),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      else if (_currentStatus == 'Completed' && isBuyer && !isReviewed)
-                        SizedBox(
-                          width: double.infinity,
-                          height: 55,
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              await RatingModal.show(context, item);
-                            },
-                            icon: const Icon(
-                              Icons.star_rate_rounded,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              'Beri Ulasan Penjual',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.sunsetOrange,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                    ),
+            ),
+          ),
         );
       },
     );

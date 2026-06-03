@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
+import 'package:reusea/utils/theme.dart';
 import 'order_detail_page.dart';
 
 class PastBuysPage extends StatefulWidget {
@@ -12,9 +14,22 @@ class PastBuysPage extends StatefulWidget {
   State<PastBuysPage> createState() => _PastBuysPageState();
 }
 
-class _PastBuysPageState extends State<PastBuysPage> {
+class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderStateMixin {
   final DatabaseService _dbService = DatabaseService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,124 +37,191 @@ class _PastBuysPageState extends State<PastBuysPage> {
     final String currentUserId = user?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F1EE),
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.black,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Past Buys',
-          style: TextStyle(
-            color: Color(0xFF1E293B),
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: Colors.grey.withValues(alpha: 0.1),
-            height: 1,
-          ),
-        ),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _dbService.getPastBuysStream(currentUserId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF1A2235)),
-            );
-          }
-
-          // Jika data di Firestore masih kosong
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text(
-                "Belum ada riwayat pembelian.",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
+      body: OceanGradientBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                child: Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: AppTheme.softShadow(),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: AppTheme.darkNavy,
+                          size: 18,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Riwayat Pembelian',
+                      style: GoogleFonts.lexend(
+                        color: AppTheme.darkNavy,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            );
-          }
 
-          List<Map<String, dynamic>> items = [];
-          for (var doc in snapshot.data!.docs) {
-            var data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id;
-            data['isMock'] = false;
-            items.add(data);
-          }
+              // TabBar section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: AppTheme.secondaryBlue,
+                    labelStyle: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 11),
+                    unselectedLabelStyle: GoogleFonts.lexend(fontWeight: FontWeight.w500, fontSize: 11),
+                    tabs: const [
+                      Tab(text: "Semua"),
+                      Tab(text: "Diproses"),
+                      Tab(text: "Selesai"),
+                      Tab(text: "Batal"),
+                    ],
+                  ),
+                ),
+              ),
 
-          // Sort in memory by createdAt descending to avoid composite index requirement
-          items.sort((a, b) {
-            Timestamp? aTime = a['createdAt'] as Timestamp?;
-            Timestamp? bTime = b['createdAt'] as Timestamp?;
-            if (aTime == null && bTime == null) return 0;
-            if (aTime == null) return 1;
-            if (bTime == null) return -1;
-            return bTime.compareTo(aTime);
-          });
+              // Expanded tab views
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _dbService.getPastBuysStream(currentUserId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+                      );
+                    }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return _buildOrderCard(context, item);
-            },
-          );
-        },
+                    List<Map<String, dynamic>> allItems = [];
+                    if (snapshot.hasData) {
+                      for (var doc in snapshot.data!.docs) {
+                        var data = doc.data() as Map<String, dynamic>;
+                        data['id'] = doc.id;
+                        data['isMock'] = false;
+                        allItems.add(data);
+                      }
+                    }
+
+                    // Sort in memory by createdAt descending
+                    allItems.sort((a, b) {
+                      Timestamp? aTime = a['createdAt'] as Timestamp?;
+                      Timestamp? bTime = b['createdAt'] as Timestamp?;
+                      if (aTime == null && bTime == null) return 0;
+                      if (aTime == null) return 1;
+                      if (bTime == null) return -1;
+                      return bTime.compareTo(aTime);
+                    });
+
+                    return TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildOrderList(context, allItems),
+                        _buildOrderList(context, allItems.where((i) => i['status'] == 'Processing').toList()),
+                        _buildOrderList(context, allItems.where((i) => i['status'] == 'Completed').toList()),
+                        _buildOrderList(context, allItems.where((i) => i['status'] == 'Cancelled').toList()),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildOrderList(BuildContext context, List<Map<String, dynamic>> items) {
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("🛍️", style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 16),
+            Text(
+              "Belum ada transaksi di sini.",
+              style: GoogleFonts.lexend(
+                color: AppTheme.secondaryBlue,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Yuk belanja barang preloved UNESA sekarang!",
+              style: GoogleFonts.lexend(
+                color: AppTheme.lightBlueGrey,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+      physics: const BouncingScrollPhysics(),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        return _buildOrderCard(context, items[index]);
+      },
     );
   }
 
   Widget _buildOrderCard(BuildContext context, Map<String, dynamic> item) {
     final String status = item['status'] ?? 'Processing';
 
-    Color statusBgColor;
-    Color statusTextColor;
-    switch (status) {
-      case 'Completed':
-        statusBgColor = const Color(0xFFE8F5E9);
-        statusTextColor = const Color(0xFF2E7D32);
-        break;
-      case 'Cancelled':
-        statusBgColor = const Color(0xFFFFEBEE);
-        statusTextColor = const Color(0xFFC62828);
-        break;
-      case 'Processing':
-      default:
-        statusBgColor = const Color(0xFFE3F2FD);
-        statusTextColor = const Color(0xFF1565C0);
-        break;
+    Color badgeColor;
+    String statusIndo;
+    if (status == 'Completed') {
+      badgeColor = AppTheme.ecoTeal;
+      statusIndo = "Selesai";
+    } else if (status == 'Cancelled') {
+      badgeColor = AppTheme.coralPeach;
+      statusIndo = "Batal";
+    } else {
+      badgeColor = AppTheme.sunsetOrange;
+      statusIndo = "Diproses";
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.softShadow(),
+        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         onTap: () {
           Navigator.push(
             context,
@@ -149,102 +231,107 @@ class _PastBuysPageState extends State<PastBuysPage> {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(16.0),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Product Image with soft rounded corners
               Container(
-                width: 90,
-                height: 90,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
-                  color: const Color(
-                    0xFFF2F1EE,
-                  ), // Menggunakan warna dasar krem aplikasi baru
-                  borderRadius: BorderRadius.circular(14),
+                  color: AppTheme.bgLight,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child:
-                        item['imagePath'] != null &&
-                            item['imagePath'].startsWith('http')
-                        ? Image.network(
-                            item['imagePath'],
-                            fit: BoxFit.cover,
-                            width: 90,
-                            height: 90,
-                          )
-                        : const Icon(
-                            Icons.shopping_bag_outlined,
-                            color: Color(0xFF1A2235),
-                            size: 36,
-                          ),
-                  ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: item['imagePath'] != null && item['imagePath'].startsWith('http')
+                      ? Image.network(item['imagePath'], fit: BoxFit.cover)
+                      : Image.asset(
+                          item['imagePath'] != null && item['imagePath'].isNotEmpty
+                              ? item['imagePath']
+                              : 'assets/images/profile_placeholder.png',
+                          fit: BoxFit.cover,
+                        ),
                 ),
               ),
               const SizedBox(width: 16),
+              // Product details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: badgeColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            statusIndo,
+                            style: GoogleFonts.lexend(
+                              color: badgeColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          item['time'] ?? '',
+                          style: GoogleFonts.lexend(
+                            color: AppTheme.lightBlueGrey,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      item['name'] ?? '',
+                      style: GoogleFonts.lexend(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.darkNavy,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item['price'] ?? '',
+                      style: GoogleFonts.lexend(
+                        fontSize: 14,
+                        color: AppTheme.primaryBlue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.person_outline_rounded, size: 12, color: AppTheme.secondaryBlue),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            item['name'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B),
+                            'Penjual: ${item['sellerName'] ?? 'Mahasiswa UNESA'}',
+                            style: GoogleFonts.lexend(
+                              fontSize: 11,
+                              color: AppTheme.secondaryBlue,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusBgColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              color: statusTextColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
                       ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item['price'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF1A2235),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Seller: ${item['sellerName'] ?? 'Mahasiswa UNESA'}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 8),
               const Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFFCBD5E1),
+                color: AppTheme.lightBlueGrey,
                 size: 24,
               ),
             ],

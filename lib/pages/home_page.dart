@@ -144,21 +144,21 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     // 5. RECOMMENDED FOR YOU (Horizontal List)
                     if (_selectedCategory == "Semua" && _searchQuery.isEmpty)
-                      _buildHorizontalProductRow("Recommended For You", allProducts.take(4).toList()),
+                      _buildHorizontalProductRow("Rekomendasi Untukmu", allProducts.take(4).toList()),
 
                     // 6. TRENDING NEAR CAMPUS (Horizontal List)
                     if (_selectedCategory == "Semua" && _searchQuery.isEmpty)
-                      _buildHorizontalProductRow("Trending Near Campus", allProducts.skip(2).take(4).toList()),
+                      _buildHorizontalProductRow("Sedang Populer di Kampus", allProducts.skip(2).take(4).toList()),
 
                     // 7. RECENTLY VIEWED (Horizontal List)
                     if (_selectedCategory == "Semua" && _searchQuery.isEmpty)
-                      _buildHorizontalProductRow("Recently Viewed", allProducts.reversed.take(3).toList()),
+                      _buildHorizontalProductRow("Terakhir Dilihat", allProducts.reversed.take(3).toList()),
 
                     // 8. NEWEST PRODUCTS (Masonry Grid)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       child: Text(
-                        _selectedCategory == "Semua" ? "Newest Products" : "Kategori $_selectedCategory",
+                        _selectedCategory == "Semua" ? "Produk Terbaru" : "Kategori $_selectedCategory",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
@@ -227,7 +227,7 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     children: [
                       Text(
-                        'Hello, $name 👋',
+                        'Halo, $name 👋',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -257,7 +257,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    "Let's give items a second life today",
+                    "Mari beri barang kesempatan kedua hari ini",
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
@@ -266,18 +266,42 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              // Profile Avatar
-              Container(
-                padding: const EdgeInsets.all(2.0),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppTheme.sunsetGradient,
-                ),
-                child: const CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person_rounded, color: AppTheme.primaryBlue),
-                ),
+              // Logo + Profile Avatar Row
+              Row(
+                children: [
+                  // ReUsea Logo with subtle glow
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.aquaTurquoise.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: CustomPaint(
+                      painter: ReUseaLogoPainter(showBackground: true),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Profile Avatar
+                  Container(
+                    padding: const EdgeInsets.all(2.0),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: AppTheme.sunsetGradient,
+                    ),
+                    child: const CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.person_rounded, color: AppTheme.primaryBlue, size: 20),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -363,7 +387,7 @@ class _HomePageState extends State<HomePage> {
               },
               style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.darkNavy),
               decoration: InputDecoration(
-                hintText: 'Search preloved items...',
+                hintText: 'Cari barang preloved...',
                 hintStyle: TextStyle(
                   color: AppTheme.secondaryBlue.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w500,
@@ -467,7 +491,7 @@ class _HomePageState extends State<HomePage> {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: Text(
-            "Featured Campaign",
+            "Kampanye Unggulan",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
           ),
         ),
