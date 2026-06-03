@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/services/auth_service.dart';
+import 'package:reusea/services/database_service.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -69,6 +70,74 @@ class SettingsPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showSeedDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          "Seed Data Dummy",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          "Apakah Anda yakin ingin menambahkan 10 produk dummy (satu untuk setiap kategori) dari berbagai penjual?",
+          style: TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF1A2235)),
+                ),
+              );
+
+              try {
+                final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+                await DatabaseService().seedDummyProducts(currentUserId);
+                if (context.mounted) {
+                  Navigator.pop(context); // Tutup loading indicator
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Berhasil memasukkan data produk dummy!"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context); // Tutup loading indicator
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Gagal memasukkan data: $e"),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A2235),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text("Ya, Seed", style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -152,6 +221,16 @@ class SettingsPage extends StatelessWidget {
                 Colors.grey.shade100,
                 Colors.grey.shade700,
                 onTap: () => _showAboutAppDialog(context),
+              ),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+
+              // 5. SEED DUMMY PRODUCTS
+              _buildSettingsTile(
+                Icons.cloud_upload_outlined,
+                'Seed Dummy Products',
+                Colors.teal.shade50,
+                Colors.teal,
+                onTap: () => _showSeedDialog(context),
               ),
               const Divider(height: 1, color: Color(0xFFEEEEEE)),
             ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:reusea/services/auth_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import 'otp_page.dart';
@@ -16,6 +17,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -34,6 +36,7 @@ class _RegisterPageState extends State<RegisterPage> {
       password: _passwordController.text.trim(),
       onSuccess: () {
         setState(() => _isLoading = false);
+        TextInput.finishAutofillContext(shouldSave: true);
         // Jika sukses membuat akun dan mengirim email link, pindah ke halaman verifikasi
         Navigator.push(
           context,
@@ -85,26 +88,35 @@ class _RegisterPageState extends State<RegisterPage> {
                   style: TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 30),
-                _buildField(
-                  "Full Name",
-                  "Enter your full name",
-                  Icons.person_outline,
-                  _nameController,
-                ),
-                const SizedBox(height: 15),
-                _buildField(
-                  "UNESA Email",
-                  "student@mhs.unesa.ac.id",
-                  Icons.email_outlined,
-                  _emailController,
-                ),
-                const SizedBox(height: 15),
-                _buildField(
-                  "Password",
-                  "Create a strong password",
-                  Icons.lock_outline,
-                  _passwordController,
-                  isPassword: true,
+                AutofillGroup(
+                  child: Column(
+                    children: [
+                      _buildField(
+                        "Full Name",
+                        "Enter your full name",
+                        Icons.person_outline,
+                        _nameController,
+                        autofillHints: const [AutofillHints.name],
+                      ),
+                      const SizedBox(height: 15),
+                      _buildField(
+                        "UNESA Email",
+                        "student@mhs.unesa.ac.id",
+                        Icons.email_outlined,
+                        _emailController,
+                        autofillHints: const [AutofillHints.email, AutofillHints.username],
+                      ),
+                      const SizedBox(height: 15),
+                      _buildField(
+                        "Password",
+                        "Create a strong password",
+                        Icons.lock_outline,
+                        _passwordController,
+                        isPassword: true,
+                        autofillHints: const [AutofillHints.newPassword],
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 30),
                 SizedBox(
@@ -152,6 +164,7 @@ class _RegisterPageState extends State<RegisterPage> {
     IconData icon,
     TextEditingController controller, {
     bool isPassword = false,
+    Iterable<String>? autofillHints,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,12 +173,26 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword ? _obscurePassword : false,
+          autofillHints: autofillHints,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
             hintText: hint,
             prefixIcon: Icon(icon, color: const Color(0xFF546E76)),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: const Color(0xFF546E76),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  )
+                : null,
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFF1A2235), width: 1.5),

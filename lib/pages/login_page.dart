@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:reusea/services/auth_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import 'register_page.dart';
@@ -18,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _resetEmailController =
       TextEditingController(); // Controller untuk email reset
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -35,6 +37,7 @@ class _LoginPageState extends State<LoginPage> {
       password: _passwordController.text.trim(),
       onSuccess: (user) {
         setState(() => _isLoading = false);
+        TextInput.finishAutofillContext(shouldSave: true);
         // Berhasil login, arahkan ke navigasi utama
         Navigator.pushReplacement(
           context,
@@ -181,19 +184,27 @@ class _LoginPageState extends State<LoginPage> {
                   style: TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 40),
-                _buildTextField(
-                  "UNESA Email",
-                  "student@mhs.unesa.ac.id",
-                  Icons.email_outlined,
-                  _emailController,
-                ),
-                const SizedBox(height: 20),
-                _buildTextField(
-                  "Password",
-                  "********",
-                  Icons.lock_outline,
-                  _passwordController,
-                  isPassword: true,
+                AutofillGroup(
+                  child: Column(
+                    children: [
+                      _buildTextField(
+                        "UNESA Email",
+                        "student@mhs.unesa.ac.id",
+                        Icons.email_outlined,
+                        _emailController,
+                        autofillHints: const [AutofillHints.email, AutofillHints.username],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        "Password",
+                        "********",
+                        Icons.lock_outline,
+                        _passwordController,
+                        isPassword: true,
+                        autofillHints: const [AutofillHints.password],
+                      ),
+                    ],
+                  ),
                 ),
 
                 // ========================================================
@@ -273,6 +284,7 @@ class _LoginPageState extends State<LoginPage> {
     IconData icon,
     TextEditingController controller, {
     bool isPassword = false,
+    Iterable<String>? autofillHints,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,12 +296,26 @@ class _LoginPageState extends State<LoginPage> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword ? _obscurePassword : false,
+          autofillHints: autofillHints,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
             hintText: hint,
             prefixIcon: Icon(icon, color: const Color(0xFF546E76)),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: const Color(0xFF546E76),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  )
+                : null,
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFF1A2235), width: 1.5),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/utils/page_transitions.dart';
+import 'package:reusea/services/database_service.dart';
 import '../models/product_model.dart';
 import 'detail_page.dart';
 import 'notification_page.dart';
@@ -16,6 +17,27 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _selectedCategory = "Semua";
   String _searchQuery = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAndSeedData();
+  }
+
+  void _checkAndSeedData() async {
+    try {
+      final productsRef = FirebaseFirestore.instance.collection('products');
+      final snapshot = await productsRef.limit(1).get();
+      if (snapshot.docs.isEmpty) {
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        if (currentUserId.isNotEmpty) {
+          await DatabaseService().seedDummyProducts(currentUserId);
+        }
+      }
+    } catch (e) {
+      // Gagal seed silent error
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
