@@ -27,6 +27,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _pickupController;
   late TextEditingController _socialController;
 
+  final List<String> _faculties = [
+    "Fakultas Vokasi",
+    "FT",
+    "FIP",
+    "FEB",
+    "FBS",
+    "FISHIPOL",
+    "FMIPA",
+    "FIKK",
+    "FH",
+  ];
+  String? _selectedFaculty;
+
   Uint8List? _imageBytes; // Menampung data foto baru dalam bentuk byte
   bool _isLoading = false;
 
@@ -44,13 +57,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _phoneController = TextEditingController();
     _pickupController = TextEditingController(text: 'Bebas / Fleksibel');
     _socialController = TextEditingController();
+    _selectedFaculty = _faculties.first;
 
     if (user != null) {
       _firestore.collection('users').doc(user.uid).get().then((doc) {
         if (doc.exists && mounted) {
           var data = doc.data() as Map<String, dynamic>;
           setState(() {
-            _facultyController.text = data['faculty'] ?? '';
+            String facInDb = data['faculty'] ?? '';
+            if (_faculties.contains(facInDb)) {
+              _selectedFaculty = facInDb;
+            } else if (facInDb.isNotEmpty) {
+              _selectedFaculty = _faculties.firstWhere(
+                (f) => facInDb.toLowerCase().contains(f.toLowerCase()) || f.toLowerCase().contains(facInDb.toLowerCase()),
+                orElse: () => _faculties.first,
+              );
+            }
+            _facultyController.text = _selectedFaculty ?? _faculties.first;
             _bioController.text = data['bio'] ?? '';
             _phoneController.text = data['phone'] ?? '';
             _pickupController.text = data['pickupPreference'] ?? 'Bebas / Fleksibel';
@@ -405,10 +428,63 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   const SizedBox(height: 20),
 
-                  _buildInputField(
-                    label: "FAKULTAS / JURUSAN",
-                    controller: _facultyController,
-                    hint: "Contoh: Fakultas Teknik / S1 Informatika",
+                  // Dropdown untuk FAKULTAS / JURUSAN
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                        child: Text(
+                          "FAKULTAS",
+                          style: GoogleFonts.lexend(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.secondaryBlue,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedFaculty,
+                          dropdownColor: Colors.white,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppTheme.primaryBlue,
+                          ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                          ),
+                          isExpanded: true,
+                          style: GoogleFonts.lexend(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.darkNavy,
+                          ),
+                          items: _faculties.map((String fac) {
+                            return DropdownMenuItem<String>(
+                              value: fac,
+                              child: Text(fac),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              _selectedFaculty = newValue;
+                              _facultyController.text = newValue ?? '';
+                            });
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
 

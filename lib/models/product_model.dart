@@ -15,6 +15,11 @@ class Product {
   final String sellerPhoto;
   final String condition; // Kondisi barang: "Baru" atau "Bekas"
   final String status; // Status barang: "Available", "Processing", "Completed", "Draft"
+  final String productType; // Tipe produk: "Dijual" atau "Donasi"
+  final String campus; // Nama Kampus COD
+  final String codPoint; // Titik rekomendasi COD
+  final String codCrowdLevel; // Crowd level: "Ramai", "Sedang", "Sepi"
+  final String sellerFaculty; // Fakultas penjual
 
   Product({
     required this.id,
@@ -31,6 +36,11 @@ class Product {
     required this.sellerPhoto,
     required this.condition,
     required this.status,
+    this.productType = 'Dijual',
+    this.campus = 'UNESA Lidah Wetan',
+    this.codPoint = '',
+    this.codCrowdLevel = 'Sedang',
+    this.sellerFaculty = 'Fakultas Vokasi',
   });
 
   factory Product.fromMap(Map<String, dynamic> map) {
@@ -63,6 +73,11 @@ class Product {
       sellerPhoto: map['sellerPhoto'] ?? '',
       condition: map['condition'] ?? 'Bekas', // Default "Bekas" untuk produk lama
       status: map['status'] ?? 'Available',
+      productType: map['productType'] ?? 'Dijual',
+      campus: map['campus'] ?? 'UNESA Lidah Wetan',
+      codPoint: map['codPoint'] ?? '',
+      codCrowdLevel: map['codCrowdLevel'] ?? 'Sedang',
+      sellerFaculty: map['sellerFaculty'] ?? 'Fakultas Vokasi',
     );
   }
 

@@ -7,6 +7,7 @@ import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/theme.dart';
 import '../models/product_model.dart';
 import 'detail_page.dart';
+import 'cart_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,8 +19,25 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _selectedCategory = "Semua";
   String _searchQuery = "";
-  final Set<String> _wishlistedIds = {};
   bool _searchHasFocus = false;
+
+  String _selectedFaculty = "Semua Fakultas";
+  final List<String> _faculties = [
+    "Semua Fakultas",
+    "Fakultas Vokasi",
+    "FT",
+    "FIP",
+    "FEB",
+    "FBS",
+    "FISHIPOL",
+    "FMIPA",
+    "FIKK",
+    "FH",
+  ];
+
+  // Wishlist state - synced from Firestore
+  Set<String> _wishlistedIds = {};
+  final DatabaseService _dbService = DatabaseService();
 
   // Mock list of category icons and colors
   final Map<String, Map<String, dynamic>> _categoryMeta = {
@@ -40,6 +58,19 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _checkAndSeedData();
+    _loadWishlist();
+  }
+
+  void _loadWishlist() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    _dbService.getWishlistStream(uid).listen((snapshot) {
+      if (mounted) {
+        setState(() {
+          _wishlistedIds = snapshot.docs.map((d) => d.id).toSet();
+        });
+      }
+    });
   }
 
   void _checkAndSeedData() async {
@@ -74,10 +105,13 @@ class _HomePageState extends State<HomePage> {
             // 2. SEARCH BAR (Floating Glass Effect)
             _buildSearchBar(),
 
-            // 3. CATEGORIES ROW (Horizontal Scroll)
+            // 3. FACULTY FILTER CHIPS (Horizontal Scroll)
+            _buildFacultyFilter(),
+
+            // 4. CATEGORIES ROW (Horizontal Scroll)
             _buildCategoriesSection(),
 
-            // 4. FEATURED SECTION (Carousel Banner)
+            // 5. FEATURED SECTION (Carousel Banner)
             _buildFeaturedCarousel(),
 
             // Stream Builder for fetching all products to distribute across sections
@@ -135,30 +169,48 @@ class _HomePageState extends State<HomePage> {
                   }).toList();
                 }
 
+                // Filter by faculty
+                if (_selectedFaculty != "Semua Fakultas") {
+                  filteredDocs = filteredDocs.where((doc) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    String faculty = data['sellerFaculty'] ?? '';
+                    return faculty == _selectedFaculty;
+                  }).toList();
+                }
+
                 // Map to Product objects
                 List<Product> allProducts = availableDocs.map((d) => Product.fromMap(d.data() as Map<String, dynamic>)).toList();
                 List<Product> filteredProducts = filteredDocs.map((d) => Product.fromMap(d.data() as Map<String, dynamic>)).toList();
 
+                // Donation products
+                List<Product> donationProducts = allProducts.where((p) => p.productType == 'Donasi').toList();
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 5. RECOMMENDED FOR YOU (Horizontal List)
-                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty)
-                      _buildHorizontalProductRow("Rekomendasi Untukmu", allProducts.take(4).toList()),
+                    // 6. RECOMMENDED FOR YOU (Horizontal List)
+                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas")
+                      _buildHorizontalProductRow("🎯 Rekomendasi Untukmu", allProducts.take(4).toList()),
 
-                    // 6. TRENDING NEAR CAMPUS (Horizontal List)
-                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty)
-                      _buildHorizontalProductRow("Sedang Populer di Kampus", allProducts.skip(2).take(4).toList()),
+                    // 7. TRENDING NEAR CAMPUS 🔥 (Horizontal List)
+                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas")
+                      _buildTrendingSection(allProducts),
 
-                    // 7. RECENTLY VIEWED (Horizontal List)
-                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty)
-                      _buildHorizontalProductRow("Terakhir Dilihat", allProducts.reversed.take(3).toList()),
+                    // 8. DONASI MAHASISWA 🎁 (Horizontal List)
+                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas" && donationProducts.isNotEmpty)
+                      _buildDonationSection(donationProducts),
 
-                    // 8. NEWEST PRODUCTS (Masonry Grid)
+                    // 9. RECENTLY VIEWED (Horizontal List)
+                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas")
+                      _buildHorizontalProductRow("⏰ Terakhir Dilihat", allProducts.reversed.take(3).toList()),
+
+                    // 10. NEWEST PRODUCTS (Masonry Grid)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       child: Text(
-                        _selectedCategory == "Semua" ? "Produk Terbaru" : "Kategori $_selectedCategory",
+                        _selectedCategory == "Semua" 
+                          ? (_selectedFaculty != "Semua Fakultas" ? "Produk dari $_selectedFaculty" : "Produk Terbaru")
+                          : "Kategori $_selectedCategory",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
@@ -207,6 +259,8 @@ class _HomePageState extends State<HomePage> {
 
   // WIDGET 1: HERO SECTION DENGAN GREETING & IMPACT CARD
   Widget _buildHeroSection(String name) {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -221,52 +275,59 @@ class _HomePageState extends State<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Halo, $name 👋',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Sustainability Mascot badge 🐢
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          children: [
-                            Text("🐢", style: TextStyle(fontSize: 12)),
-                            SizedBox(width: 4),
-                            Text(
-                              "Eco Buddy",
-                              style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Halo, $name 👋',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
                             ),
-                          ],
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    "Mari beri barang kesempatan kedua hari ini",
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                        const SizedBox(width: 8),
+                        // Sustainability Mascot badge 🐢
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text("🐢", style: TextStyle(fontSize: 12)),
+                              SizedBox(width: 4),
+                              Text(
+                                "Eco Buddy",
+                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    const Text(
+                      "Mari beri barang kesempatan kedua hari ini",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              // Logo + Profile Avatar Row
+              const SizedBox(width: 8),
+              // Logo + Cart + Profile Avatar Row
               Row(
                 children: [
                   // ReUsea Logo with subtle glow
@@ -287,7 +348,66 @@ class _HomePageState extends State<HomePage> {
                       painter: ReUseaLogoPainter(showBackground: true),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
+                  // Shopping Cart Icon with dynamic badge
+                  StreamBuilder<QuerySnapshot>(
+                    stream: _dbService.getCartStream(currentUserId),
+                    builder: (context, cartSnap) {
+                      int itemCount = cartSnap.hasData ? cartSnap.data!.docs.length : 0;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                SlideUpRoute(page: const CartPage()),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.2),
+                              ),
+                              child: const Icon(
+                                Icons.shopping_cart_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                          if (itemCount > 0)
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  itemCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 12),
                   // Profile Avatar
                   Container(
                     padding: const EdgeInsets.all(2.0),
@@ -317,11 +437,11 @@ class _HomePageState extends State<HomePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildImpactItem("♻", "12 items", "reused"),
+                _buildImpactItem("♻", "1.258", "Barang Reused"),
                 _buildImpactDivider(),
-                _buildImpactItem("🌱", "24kg carbon", "saved"),
+                _buildImpactItem("🌱", "340 Kg", "Limbah Berkurang"),
                 _buildImpactDivider(),
-                _buildImpactItem("💰", "Rp 1.2M", "saved"),
+                _buildImpactItem("💰", "Rp 125jt", "Hemat Mahasiswa"),
               ],
             ),
           ),
@@ -403,7 +523,79 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // WIDGET 3: CATEGORIES Horizontal List
+  // WIDGET 3: FACULTY FILTER (Horizontal Scroll Chips)
+  Widget _buildFacultyFilter() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Row(
+              children: [
+                Icon(Icons.school_rounded, color: AppTheme.primaryBlue, size: 16),
+                SizedBox(width: 6),
+                Text(
+                  "Filter Fakultas",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.secondaryBlue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: _faculties.map((faculty) {
+                bool isSelected = _selectedFaculty == faculty;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedFaculty = faculty;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: isSelected ? AppTheme.oceanWaveGradient : null,
+                      color: isSelected ? null : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: isSelected
+                          ? AppTheme.glowShadow(color: AppTheme.primaryBlue)
+                          : AppTheme.softShadow(),
+                      border: Border.all(
+                        color: isSelected ? Colors.transparent : AppTheme.secondaryBlue.withValues(alpha: 0.08),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Text(
+                      faculty,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : AppTheme.darkNavy,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // WIDGET 4: CATEGORIES Horizontal List
   Widget _buildCategoriesSection() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -460,7 +652,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // WIDGET 4: FEATURED BANNER SECTION
+  // WIDGET 5: FEATURED BANNER SECTION
   Widget _buildFeaturedCarousel() {
     if (_selectedCategory != "Semua" || _searchQuery.isNotEmpty) {
       return const SizedBox.shrink();
@@ -537,7 +729,144 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // WIDGET 5, 6, 7: HORIZONTAL SCROLL PRODUCT ROW
+  // WIDGET 6: TRENDING DI KAMPUS 🔥
+  Widget _buildTrendingSection(List<Product> allProducts) {
+    // Sort by some "popularity" heuristic - here we just take a shuffled selection
+    final trendingProducts = allProducts.length > 4
+        ? (allProducts.toList()..shuffle()).take(4).toList()
+        : allProducts;
+
+    if (trendingProducts.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF6B35), Color(0xFFFF2E63)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text("🔥", style: TextStyle(fontSize: 14)),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    "Sedang Populer di Kampus",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.darkNavy,
+                    ),
+                  ),
+                ],
+              ),
+              const Icon(Icons.arrow_forward_rounded, color: AppTheme.secondaryBlue, size: 18),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 205,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: trendingProducts.length,
+            itemBuilder: (context, index) {
+              final prod = trendingProducts[index];
+              return Container(
+                width: 145,
+                margin: const EdgeInsets.only(right: 14, bottom: 8),
+                child: _buildMasonryProductCard(prod),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  // WIDGET 7: DONASI MAHASISWA 🎁
+  Widget _buildDonationSection(List<Product> donationProducts) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.ecoGradient,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text("🎁", style: TextStyle(fontSize: 14)),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    "Donasi Mahasiswa",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.darkNavy,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.ecoTeal.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  "Gratis!",
+                  style: TextStyle(
+                    color: AppTheme.ecoTeal,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 205,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: donationProducts.length,
+            itemBuilder: (context, index) {
+              final prod = donationProducts[index];
+              return Container(
+                width: 145,
+                margin: const EdgeInsets.only(right: 14, bottom: 8),
+                child: _buildMasonryProductCard(prod),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  // WIDGET 8: HORIZONTAL SCROLL PRODUCT ROW (Generic)
   Widget _buildHorizontalProductRow(String title, List<Product> products) {
     if (products.isEmpty) return const SizedBox.shrink();
 
@@ -583,10 +912,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // WIDGET 8: MASONRY/GRID CARD PRODUCT
+  // WIDGET 9: MASONRY/GRID CARD PRODUCT
   Widget _buildMasonryProductCard(Product product) {
     final bool isWishlisted = _wishlistedIds.contains(product.id);
     final conditionColor = product.condition == 'Baru' ? AppTheme.ecoTeal : AppTheme.sunsetOrange;
+    final bool isDonation = product.productType == 'Donasi';
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return GestureDetector(
       onTap: () {
@@ -601,8 +932,10 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: AppTheme.softShadow(),
           border: Border.all(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.04),
-            width: 1,
+            color: isDonation 
+                ? AppTheme.ecoTeal.withValues(alpha: 0.15) 
+                : AppTheme.primaryBlue.withValues(alpha: 0.04),
+            width: isDonation ? 1.5 : 1,
           ),
         ),
         child: Column(
@@ -629,13 +962,9 @@ class _HomePageState extends State<HomePage> {
                     right: 10,
                     child: GestureDetector(
                       onTap: () {
-                        setState(() {
-                          if (isWishlisted) {
-                            _wishlistedIds.remove(product.id);
-                          } else {
-                            _wishlistedIds.add(product.id);
-                          }
-                        });
+                        if (currentUserId.isNotEmpty) {
+                          _dbService.toggleWishlist(currentUserId, product);
+                        }
                       },
                       child: CircleAvatar(
                         radius: 15,
@@ -664,6 +993,37 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
+                  // Donation Badge 🎁
+                  if (isDonation)
+                    Positioned(
+                      bottom: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.ecoGradient,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.ecoTeal.withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text("🎁", style: TextStyle(fontSize: 10)),
+                            SizedBox(width: 3),
+                            Text(
+                              "Donasi",
+                              style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -678,28 +1038,37 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          product.category,
-                          style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 8, fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      // Seller rating ⭐
-                      const Row(
-                        children: [
-                          Icon(Icons.star_rounded, color: AppTheme.sunYellow, size: 11),
-                          SizedBox(width: 2),
-                          Text(
-                            "4.8",
-                            style: TextStyle(color: AppTheme.darkNavy, fontSize: 9, fontWeight: FontWeight.bold),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                        ],
+                          child: Text(
+                            product.category,
+                            style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 8, fontWeight: FontWeight.w800),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ),
+                      // Seller Faculty tag
+                      if (product.sellerFaculty.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.secondaryBlue.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            product.sellerFaculty,
+                            style: TextStyle(
+                              color: AppTheme.secondaryBlue.withValues(alpha: 0.7),
+                              fontSize: 7,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -716,8 +1085,12 @@ class _HomePageState extends State<HomePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        product.price,
-                        style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: 12),
+                        isDonation ? "Gratis" : product.price,
+                        style: TextStyle(
+                          color: isDonation ? AppTheme.ecoTeal : AppTheme.primaryBlue, 
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 12,
+                        ),
                       ),
                       Text(
                         product.time,

@@ -9,6 +9,7 @@ import 'edit_profile_page.dart';
 import 'login_page.dart';
 import 'past_buys_page.dart';
 import 'past_sells_page.dart';
+import 'wishlist_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -225,6 +226,47 @@ class ProfilePage extends StatelessWidget {
                         const Padding(
                           padding: EdgeInsets.only(left: 8, bottom: 12),
                           child: Text(
+                            'MY COLLECTION',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.secondaryBlue,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                        _buildMenuTile(
+                          Icons.favorite_border_rounded,
+                          'Wishlist',
+                          'Produk yang kamu simpan',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              SlideRightRoute(page: const WishlistPage()),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 30),
+                        // SUSTAINABILITY IMPACT DASHBOARD
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8, bottom: 12),
+                          child: Text(
+                            'DAMPAK KEBERLANJUTAN',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.secondaryBlue,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                        _buildSustainabilityCard(currentUserId),
+
+                        const SizedBox(height: 30),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8, bottom: 12),
+                          child: Text(
                             'MANAGE DATA',
                             style: TextStyle(
                               fontSize: 11,
@@ -320,6 +362,88 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSustainabilityCard(String uid) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .where('buyerId', isEqualTo: uid)
+          .where('status', isEqualTo: 'Completed')
+          .snapshots(),
+      builder: (context, snapshot) {
+        int itemsReused = 0;
+        if (snapshot.hasData) {
+          itemsReused = snapshot.data!.docs.length;
+        }
+        double carbonSaved = itemsReused * 2.0; // ~2kg CO2 per reused item
+        double moneySaved = itemsReused * 50000.0; // ~50k avg savings
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: AppTheme.ecoGradient,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: AppTheme.softShadow(),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Text("🌍", style: TextStyle(fontSize: 20)),
+                  SizedBox(width: 8),
+                  Text(
+                    "Dampak Positifmu",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildImpactStat("♻", "$itemsReused", "Barang\nReused"),
+                  _buildImpactStat("🌱", "${carbonSaved.toStringAsFixed(0)} Kg", "CO₂\nDiselamatkan"),
+                  _buildImpactStat("💰", "Rp ${(moneySaved / 1000).toStringAsFixed(0)}K", "Uang\nTerhemat"),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildImpactStat(String emoji, String value, String label) {
+    return Column(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 22)),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 

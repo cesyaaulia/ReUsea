@@ -206,6 +206,41 @@ class _DetailPageState extends State<DetailPage> {
                   ),
                 ),
               ),
+              // Wishlist Heart Button overlay
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 10,
+                right: 20,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _dbService.getWishlistStream(_auth.currentUser?.uid ?? ''),
+                  builder: (context, wishSnap) {
+                    final wishIds = wishSnap.hasData
+                        ? wishSnap.data!.docs.map((d) => d.id).toSet()
+                        : <String>{};
+                    final isWishlisted = wishIds.contains(widget.product.id);
+                    return GestureDetector(
+                      onTap: () {
+                        final uid = _auth.currentUser?.uid;
+                        if (uid != null) {
+                          _dbService.toggleWishlist(uid, widget.product);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          boxShadow: AppTheme.softShadow(),
+                        ),
+                        child: Icon(
+                          isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: isWishlisted ? Colors.redAccent : AppTheme.secondaryBlue,
+                          size: 22,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
               // Index Indicator Pill
               Positioned(
                 bottom: 24,
@@ -359,7 +394,7 @@ class _DetailPageState extends State<DetailPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Location Section
+                        // Location Section with COD Details
                         const Text(
                           "Lokasi Pengambilan",
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
@@ -375,37 +410,150 @@ class _DetailPageState extends State<DetailPage> {
                               width: 1,
                             ),
                           ),
-                          child: Row(
+                          child: Column(
                             children: [
-                              const CircleAvatar(
-                                backgroundColor: Colors.white,
-                                child: Icon(Icons.location_on_rounded, color: AppTheme.primaryBlue),
+                              Row(
+                                children: [
+                                  const CircleAvatar(
+                                    backgroundColor: Colors.white,
+                                    child: Icon(Icons.location_on_rounded, color: AppTheme.primaryBlue),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          productLocation,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: AppTheme.darkNavy,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          widget.product.campus.isNotEmpty ? widget.product.campus : "Surabaya, East Java",
+                                          style: TextStyle(
+                                            color: AppTheme.secondaryBlue.withValues(alpha: 0.7),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                              // COD Point Details
+                              if (widget.product.codPoint.isNotEmpty) ...[
+                                const Divider(height: 20, thickness: 1, color: Color(0xFFE8ECF0)),
+                                Row(
                                   children: [
-                                    Text(
-                                      productLocation,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: AppTheme.darkNavy,
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.pin_drop_rounded, color: AppTheme.primaryBlue, size: 16),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            "Titik COD Rekomendasi",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: AppTheme.darkNavy,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            widget.product.codPoint,
+                                            style: TextStyle(
+                                              color: AppTheme.secondaryBlue.withValues(alpha: 0.7),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      "Surabaya, East Java",
-                                      style: TextStyle(
-                                        color: AppTheme.secondaryBlue.withValues(alpha: 0.7),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
+                                    // Crowd Level Badge
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: widget.product.codCrowdLevel == 'Ramai'
+                                            ? AppTheme.ecoTeal.withValues(alpha: 0.1)
+                                            : widget.product.codCrowdLevel == 'Sepi'
+                                                ? Colors.orange.withValues(alpha: 0.1)
+                                                : AppTheme.primaryBlue.withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            widget.product.codCrowdLevel == 'Ramai'
+                                                ? Icons.people_rounded
+                                                : widget.product.codCrowdLevel == 'Sepi'
+                                                    ? Icons.person_rounded
+                                                    : Icons.group_rounded,
+                                            size: 12,
+                                            color: widget.product.codCrowdLevel == 'Ramai'
+                                                ? AppTheme.ecoTeal
+                                                : widget.product.codCrowdLevel == 'Sepi'
+                                                    ? Colors.orange
+                                                    : AppTheme.primaryBlue,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            widget.product.codCrowdLevel,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: widget.product.codCrowdLevel == 'Ramai'
+                                                  ? AppTheme.ecoTeal
+                                                  : widget.product.codCrowdLevel == 'Sepi'
+                                                      ? Colors.orange
+                                                      : AppTheme.primaryBlue,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
+                                const SizedBox(height: 10),
+                                // Safety Tip
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.sunYellow.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Text("💡", style: TextStyle(fontSize: 14)),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Tips: Temui penjual di tempat ramai saat jam kuliah untuk keamanan.",
+                                          style: TextStyle(
+                                            color: AppTheme.darkNavy,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -727,89 +875,133 @@ class _DetailPageState extends State<DetailPage> {
             ),
           ),
           bottomNavigationBar: Container(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
             decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(top: BorderSide(color: Color(0xFFF0F4F8))),
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: isProductProcessing
-                        ? null
-                        : () {
-                            _navigateToChat(
-                              initialSuggestions: [
-                                "Barangnya masih ada nggak kak?",
-                                "Kondisi barangnya gimana kak?",
-                                "Boleh nego nggak kak?",
-                              ],
-                            );
-                          },
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-                    label: const Text("Tanya Penjual"),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primaryBlue,
-                      side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: isProductProcessing
-                        ? null
-                        : () {
-                            final currentUser = _auth.currentUser;
-                            if (currentUser == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Silakan login terlebih dahulu."),
-                                  backgroundColor: AppTheme.secondaryBlue,
+                // Add to Cart button
+                if (!isProductProcessing && widget.product.sellerId != (_auth.currentUser?.uid ?? ''))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final uid = _auth.currentUser?.uid;
+                          if (uid == null) return;
+                          await _dbService.addToCart(uid, widget.product);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  "Ditambahkan ke keranjang! 🛒",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                              );
-                              return;
-                            }
-                            if (widget.product.sellerId == currentUser.uid) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Anda tidak bisa membeli barang sendiri!"),
-                                  backgroundColor: AppTheme.secondaryBlue,
-                                ),
-                              );
-                              return;
-                            }
-                            Navigator.push(
-                              context,
-                              SlideUpRoute(
-                                page: CheckoutPage(product: widget.product),
+                                backgroundColor: AppTheme.ecoTeal,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                             );
-                          },
-                    child: Container(
-                      height: 50,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        gradient: isProductProcessing ? null : AppTheme.primaryGradient,
-                        color: isProductProcessing ? Colors.grey : null,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: isProductProcessing ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
-                      ),
-                      child: Text(
-                        isProductProcessing ? "Diproses" : "Beli Sekarang",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          }
+                        },
+                        icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+                        label: const Text("Tambah ke Keranjang"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryBlue,
+                          side: BorderSide(color: AppTheme.primaryBlue.withValues(alpha: 0.3), width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isProductProcessing
+                            ? null
+                            : () {
+                                _navigateToChat(
+                                  initialSuggestions: [
+                                    "Barangnya masih ada nggak kak?",
+                                    "Kondisi barangnya gimana kak?",
+                                    "Boleh nego nggak kak?",
+                                  ],
+                                );
+                              },
+                        icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                        label: const Text("Tanya"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryBlue,
+                          side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: GestureDetector(
+                        onTap: isProductProcessing
+                            ? null
+                            : () {
+                                final currentUser = _auth.currentUser;
+                                if (currentUser == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Silakan login terlebih dahulu."),
+                                      backgroundColor: AppTheme.secondaryBlue,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                if (widget.product.sellerId == currentUser.uid) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Anda tidak bisa membeli barang sendiri!"),
+                                      backgroundColor: AppTheme.secondaryBlue,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                Navigator.push(
+                                  context,
+                                  SlideUpRoute(
+                                    page: CheckoutPage(product: widget.product),
+                                  ),
+                                );
+                              },
+                        child: Container(
+                          height: 50,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            gradient: isProductProcessing ? null : AppTheme.primaryGradient,
+                            color: isProductProcessing ? Colors.grey : null,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: isProductProcessing ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
+                          ),
+                          child: Text(
+                            isProductProcessing ? "Diproses" : (widget.product.productType == 'Donasi' ? "Klaim Donasi 🎁" : "Beli Sekarang"),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -36,12 +36,84 @@ class _SellItemPageState extends State<SellItemPage> {
     "Lainnya",
   ];
   String selectedCategory = "Buku";
-  String selectedLocation = "UNESA Lidah Wetan, Surabaya";
+  String selectedLocation = "UNESA Lidah Wetan - Foodcourt UNESA Lidah Wetan";
 
   // =============================================
   // KONDISI BARANG: Baru / Bekas
   // =============================================
   String selectedCondition = "Bekas";
+
+  // =============================================
+  // NEW: TIPE PRODUK & COD POINT
+  // =============================================
+  String selectedType = "Dijual"; // "Dijual" atau "Donasi"
+  
+  final List<String> campuses = [
+    "UNESA Lidah Wetan",
+    "UNESA Ketintang",
+    "UNESA Magetan",
+    "UNESA Kampus 5 Mojokerto",
+    "UNESA Kampus 6 Pacet",
+  ];
+  late String selectedCampus;
+  
+  final Map<String, List<String>> campusCodPoints = {
+    "UNESA Lidah Wetan": [
+      "Foodcourt UNESA Lidah Wetan",
+      "Gedung Fakultas Vokasi",
+      "Perpustakaan UNESA",
+      "GOR UNESA",
+      "Pakuwon Mall",
+      "Lenmarc Mall"
+    ],
+    "UNESA Ketintang": [
+      "Foodcourt UNESA Ketintang",
+      "Gedung Rektorat",
+      "Perpustakaan Pusat",
+      "Gedung Fakultas",
+      "Royal Plaza",
+      "City of Tomorrow"
+    ],
+    "UNESA Magetan": [
+      "Area Kampus Utama",
+      "Kantin Kampus",
+      "Alun-Alun Magetan"
+    ],
+    "UNESA Kampus 5 Mojokerto": [
+      "Area Kampus Utama",
+      "Kantin Kampus"
+    ],
+    "UNESA Kampus 6 Pacet": [
+      "Area Kampus Utama",
+      "Kantin Kampus"
+    ],
+  };
+  late String selectedCodPoint;
+  
+  final Map<String, String> codPointCrowdLevels = {
+    "Foodcourt UNESA Lidah Wetan": "Ramai",
+    "Gedung Fakultas Vokasi": "Sedang",
+    "Perpustakaan UNESA": "Sedang",
+    "GOR UNESA": "Sepi",
+    "Pakuwon Mall": "Ramai",
+    "Lenmarc Mall": "Sepi",
+    "Foodcourt UNESA Ketintang": "Ramai",
+    "Gedung Rektorat": "Sedang",
+    "Perpustakaan Pusat": "Sedang",
+    "Gedung Fakultas": "Sedang",
+    "Royal Plaza": "Ramai",
+    "City of Tomorrow": "Ramai",
+    "Area Kampus Utama": "Sedang",
+    "Kantin Kampus": "Ramai",
+    "Alun-Alun Magetan": "Ramai",
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    selectedCampus = campuses.first;
+    selectedCodPoint = campusCodPoints[selectedCampus]!.first;
+  }
 
   // =============================================
   // MULTI-FOTO (Maksimal 5 Foto)
@@ -99,7 +171,7 @@ class _SellItemPageState extends State<SellItemPage> {
 
   void _handleUploadItem() async {
     if (_nameController.text.trim().isEmpty ||
-        _priceController.text.trim().isEmpty ||
+        (selectedType == "Dijual" && _priceController.text.trim().isEmpty) ||
         _descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -125,13 +197,17 @@ class _SellItemPageState extends State<SellItemPage> {
 
     await _dbService.uploadProduct(
       name: _nameController.text.trim(),
-      price: _priceController.text.trim(),
+      price: selectedType == "Donasi" ? "Gratis" : _priceController.text.trim(),
       category: selectedCategory,
       description: _descriptionController.text.trim(),
       location: selectedLocation,
       sellerId: currentUserId,
       condition: selectedCondition,
       imageBytesList: _imageBytesList,
+      productType: selectedType,
+      campus: selectedCampus,
+      codPoint: selectedCodPoint,
+      codCrowdLevel: codPointCrowdLevels[selectedCodPoint] ?? "Sedang",
       onSuccess: () {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -246,6 +322,71 @@ class _SellItemPageState extends State<SellItemPage> {
                       const SizedBox(height: 20),
     
                       // =============================================
+                      // SECTION: TIPE PRODUK
+                      // =============================================
+                      _buildInputLabel("Tipe Produk"),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedType = "Dijual";
+                                  _priceController.clear();
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                decoration: BoxDecoration(
+                                  gradient: selectedType == "Dijual" ? AppTheme.primaryGradient : null,
+                                  color: selectedType == "Dijual" ? null : AppTheme.bgLight,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  "Dijual",
+                                  style: TextStyle(
+                                    color: selectedType == "Dijual" ? Colors.white : AppTheme.secondaryBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedType = "Donasi";
+                                  _priceController.text = "Gratis";
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                decoration: BoxDecoration(
+                                  gradient: selectedType == "Donasi" ? AppTheme.oceanWaveGradient : null,
+                                  color: selectedType == "Donasi" ? null : AppTheme.bgLight,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  "🎁 Donasi / Titip",
+                                  style: TextStyle(
+                                    color: selectedType == "Donasi" ? Colors.white : AppTheme.secondaryBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // =============================================
                       // SECTION: HARGA & KATEGORI (Row)
                       // =============================================
                       Row(
@@ -256,10 +397,11 @@ class _SellItemPageState extends State<SellItemPage> {
                               children: [
                                 _buildInputLabel("Harga"),
                                 _buildTextField(
-                                  "Rp 0",
+                                  selectedType == "Donasi" ? "Gratis" : "Rp 0",
                                   _priceController,
+                                  enabled: selectedType != "Donasi",
                                   keyboardType: TextInputType.number,
-                                  formatters: [CurrencyInputFormatter()],
+                                  formatters: selectedType != "Donasi" ? [CurrencyInputFormatter()] : null,
                                 ),
                               ],
                             ),
@@ -309,7 +451,7 @@ class _SellItemPageState extends State<SellItemPage> {
                         ],
                       ),
                       const SizedBox(height: 20),
-    
+     
                       // =============================================
                       // SECTION: KONDISI BARANG (Baru / Bekas)
                       // =============================================
@@ -322,7 +464,7 @@ class _SellItemPageState extends State<SellItemPage> {
                         ],
                       ),
                       const SizedBox(height: 20),
-    
+     
                       // =============================================
                       // SECTION: DESKRIPSI
                       // =============================================
@@ -333,20 +475,56 @@ class _SellItemPageState extends State<SellItemPage> {
                         maxLines: 4,
                       ),
                       const SizedBox(height: 20),
-    
+     
                       // =============================================
-                      // SECTION: LOKASI PICKUP
+                      // SECTION: KAMPUS & COD POINT DROP DOWN
                       // =============================================
-                      _buildInputLabel("Lokasi Pengambilan"),
+                      _buildInputLabel("Kampus Pengambilan"),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
                           color: AppTheme.bgLight,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.transparent),
                         ),
                         child: DropdownButtonFormField<String>(
-                          initialValue: selectedLocation,
+                          value: selectedCampus,
+                          dropdownColor: Colors.white,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppTheme.primaryBlue,
+                          ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            prefixIcon: Icon(Icons.school_rounded, color: AppTheme.primaryBlue, size: 18),
+                            prefixIconConstraints: BoxConstraints(minWidth: 32),
+                          ),
+                          style: const TextStyle(fontSize: 13, color: AppTheme.darkNavy, fontWeight: FontWeight.bold),
+                          items: campuses.map((String campus) {
+                            return DropdownMenuItem<String>(
+                              value: campus,
+                              child: Text(campus),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedCampus = newValue!;
+                              selectedCodPoint = campusCodPoints[selectedCampus]!.first;
+                              selectedLocation = "$selectedCampus - $selectedCodPoint";
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      _buildInputLabel("📍 Rekomendasi Titik COD"),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgLight,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: DropdownButtonFormField<String>(
+                          value: selectedCodPoint,
                           dropdownColor: Colors.white,
                           icon: const Icon(
                             Icons.keyboard_arrow_down_rounded,
@@ -358,20 +536,84 @@ class _SellItemPageState extends State<SellItemPage> {
                             prefixIconConstraints: BoxConstraints(minWidth: 32),
                           ),
                           style: const TextStyle(fontSize: 13, color: AppTheme.darkNavy, fontWeight: FontWeight.bold),
-                          items: [
-                            "UNESA Lidah Wetan, Surabaya",
-                            "UNESA Ketintang, Surabaya",
-                          ].map((String location) {
+                          items: campusCodPoints[selectedCampus]!.map((String pt) {
                             return DropdownMenuItem<String>(
-                              value: location,
-                              child: Text(location),
+                              value: pt,
+                              child: Text(pt),
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
                             setState(() {
-                              selectedLocation = newValue!;
+                              selectedCodPoint = newValue!;
+                              selectedLocation = "$selectedCampus - $selectedCodPoint";
                             });
                           },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Crowd Level & Safety Tips
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.people_rounded, size: 16, color: AppTheme.primaryBlue),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  "Estimasi Keramaian: ",
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: (codPointCrowdLevels[selectedCodPoint] == "Ramai"
+                                        ? Colors.redAccent.withValues(alpha: 0.1)
+                                        : (codPointCrowdLevels[selectedCodPoint] == "Sedang"
+                                            ? Colors.orangeAccent.withValues(alpha: 0.1)
+                                            : Colors.green.withValues(alpha: 0.1))),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    codPointCrowdLevels[selectedCodPoint] ?? "Sedang",
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: (codPointCrowdLevels[selectedCodPoint] == "Ramai"
+                                          ? Colors.redAccent
+                                          : (codPointCrowdLevels[selectedCodPoint] == "Sedang"
+                                              ? Colors.orangeAccent
+                                              : Colors.green)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            const Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.shield_outlined, size: 16, color: AppTheme.ecoTeal),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "Tips Keamanan: Lakukan COD di tempat ramai, cek kondisi barang secara teliti sebelum membayar, dan utamakan area kampus.",
+                                    style: TextStyle(fontSize: 10, color: AppTheme.secondaryBlue, height: 1.4, fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -595,23 +837,33 @@ class _SellItemPageState extends State<SellItemPage> {
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? formatters,
+    bool enabled = true,
   }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
       inputFormatters: formatters,
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+      enabled: enabled,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        color: enabled ? AppTheme.darkNavy : AppTheme.secondaryBlue,
+      ),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.grey, fontWeight: FontWeight.normal),
         filled: true,
-        fillColor: AppTheme.bgLight,
+        fillColor: enabled ? AppTheme.bgLight : AppTheme.bgLight.withValues(alpha: 0.5),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.transparent),
+        ),
+        disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Colors.transparent),
         ),

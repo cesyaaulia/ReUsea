@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:reusea/models/product_model.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -85,6 +86,10 @@ class DatabaseService {
     required String condition,
     required List<Uint8List>? imageBytesList,
     Uint8List? imageBytes,
+    String productType = 'Dijual',
+    String campus = 'UNESA Lidah Wetan',
+    String codPoint = '',
+    String codCrowdLevel = 'Sedang',
     required Function() onSuccess,
     required Function(String) onError,
   }) async {
@@ -106,6 +111,18 @@ class DatabaseService {
           user?.displayName ?? user?.email?.split('@')[0] ?? 'Mahasiswa UNESA';
       String sellerPhoto = user?.photoURL ?? '';
 
+      // Ambil fakultas penjual
+      String sellerFaculty = 'Fakultas Vokasi';
+      if (user != null) {
+        try {
+          DocumentSnapshot userDoc = await _db.collection('users').doc(user.uid).get();
+          if (userDoc.exists) {
+            var userData = userDoc.data() as Map<String, dynamic>;
+            sellerFaculty = userData['faculty'] ?? 'Fakultas Vokasi';
+          }
+        } catch (_) {}
+      }
+
       await docRef.set({
         'id': docRef.id,
         'name': name,
@@ -120,6 +137,11 @@ class DatabaseService {
         'imagePath': mainImageUrl,
         'imageUrls': imageUrls,
         'status': 'Available',
+        'productType': productType,
+        'campus': campus,
+        'codPoint': codPoint,
+        'codCrowdLevel': codCrowdLevel,
+        'sellerFaculty': sellerFaculty,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -148,6 +170,10 @@ class DatabaseService {
     required List<String> existingImageUrls,
     Uint8List? newImageBytes,
     String? existingImageUrl,
+    String productType = 'Dijual',
+    String campus = 'UNESA Lidah Wetan',
+    String codPoint = '',
+    String codCrowdLevel = 'Sedang',
     required Function() onSuccess,
     required Function(String) onError,
   }) async {
@@ -178,6 +204,18 @@ class DatabaseService {
           user?.displayName ?? user?.email?.split('@')[0] ?? 'Mahasiswa UNESA';
       String sellerPhoto = user?.photoURL ?? '';
 
+      // Ambil fakultas penjual
+      String sellerFaculty = 'Fakultas Vokasi';
+      if (user != null) {
+        try {
+          DocumentSnapshot userDoc = await _db.collection('users').doc(user.uid).get();
+          if (userDoc.exists) {
+            var userData = userDoc.data() as Map<String, dynamic>;
+            sellerFaculty = userData['faculty'] ?? 'Fakultas Vokasi';
+          }
+        } catch (_) {}
+      }
+
       await _db.collection('products').doc(productId).update({
         'name': name,
         'price': price,
@@ -189,6 +227,11 @@ class DatabaseService {
         'imageUrls': finalImageUrls,
         'sellerName': sellerName,
         'sellerPhoto': sellerPhoto,
+        'productType': productType,
+        'campus': campus,
+        'codPoint': codPoint,
+        'codCrowdLevel': codCrowdLevel,
+        'sellerFaculty': sellerFaculty,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -749,6 +792,134 @@ class DatabaseService {
         .where('targetId', isEqualTo: sellerId)
         .where('type', isEqualTo: 'seller')
         .snapshots();
+  }
+
+  // ====================================================================
+  // 7. MANAJEMEN WISHLIST MAHASISWA
+  // ====================================================================
+  Stream<QuerySnapshot> getWishlistStream(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('wishlist')
+        .snapshots();
+  }
+
+  Future<void> toggleWishlist(String userId, Product product) async {
+    try {
+      DocumentReference docRef = _db
+          .collection('users')
+          .doc(userId)
+          .collection('wishlist')
+          .doc(product.id);
+      
+      DocumentSnapshot doc = await docRef.get();
+      if (doc.exists) {
+        await docRef.delete();
+      } else {
+        await docRef.set({
+          'id': product.id,
+          'category': product.category,
+          'name': product.name,
+          'price': product.price,
+          'imagePath': product.imagePath,
+          'imageUrls': product.imageUrls,
+          'sellerId': product.sellerId,
+          'sellerName': product.sellerName,
+          'sellerPhoto': product.sellerPhoto,
+          'condition': product.condition,
+          'status': product.status,
+          'productType': product.productType,
+          'campus': product.campus,
+          'codPoint': product.codPoint,
+          'codCrowdLevel': product.codCrowdLevel,
+          'sellerFaculty': product.sellerFaculty,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      print("Gagal toggle wishlist: $e");
+    }
+  }
+
+  // ====================================================================
+  // 8. MANAJEMEN KERANJANG BELANJA
+  // ====================================================================
+  Stream<QuerySnapshot> getCartStream(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('cart')
+        .snapshots();
+  }
+
+  Future<void> addToCart(String userId, Product product) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('cart')
+          .doc(product.id)
+          .set({
+            'id': product.id,
+            'category': product.category,
+            'name': product.name,
+            'price': product.price,
+            'imagePath': product.imagePath,
+            'imageUrls': product.imageUrls,
+            'sellerId': product.sellerId,
+            'sellerName': product.sellerName,
+            'sellerPhoto': product.sellerPhoto,
+            'condition': product.condition,
+            'status': product.status,
+            'productType': product.productType,
+            'campus': product.campus,
+            'codPoint': product.codPoint,
+            'codCrowdLevel': product.codCrowdLevel,
+            'sellerFaculty': product.sellerFaculty,
+            'addedAt': FieldValue.serverTimestamp(),
+          });
+    } catch (e) {
+      print("Gagal menambahkan ke keranjang: $e");
+    }
+  }
+
+  Future<void> removeFromCart(String userId, String productId) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('cart')
+          .doc(productId)
+          .delete();
+    } catch (e) {
+      print("Gagal menghapus dari keranjang: $e");
+    }
+  }
+
+  Future<void> moveCartToWishlist(String userId, Product product) async {
+    try {
+      await removeFromCart(userId, product.id);
+      await toggleWishlist(userId, product);
+    } catch (e) {
+      print("Gagal memindahkan dari keranjang ke wishlist: $e");
+    }
+  }
+
+  Future<void> moveWishlistToCart(String userId, Product product) async {
+    try {
+      // Hapus dari wishlist
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('wishlist')
+          .doc(product.id)
+          .delete();
+      // Tambah ke keranjang
+      await addToCart(userId, product);
+    } catch (e) {
+      print("Gagal memindahkan dari wishlist ke keranjang: $e");
+    }
   }
 }
 
