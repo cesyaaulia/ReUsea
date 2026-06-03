@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/models/product_model.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/services/delivery_service.dart';
+import 'package:reusea/utils/theme.dart';
 import 'map_picker_page.dart';
 
 /// Halaman Checkout — Buyer memilih alamat pengiriman & jasa pengiriman / COD
@@ -77,28 +79,28 @@ class _CheckoutPageState extends State<CheckoutPage>
           context: context,
           builder: (context) => AlertDialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(24),
             ),
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.location_on, color: Color(0xFF1A2235)),
-                SizedBox(width: 10),
+                const Icon(Icons.location_on_rounded, color: AppTheme.primaryBlue),
+                const SizedBox(width: 10),
                 Text(
                   'Akses Lokasi GPS',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            content: const Text(
+            content: Text(
               'ReUsea memerlukan akses lokasi GPS Anda untuk mendeteksi posisi saat ini secara akurat dan mengisi alamat pengiriman secara otomatis. Apakah Anda mengizinkan?',
-              style: TextStyle(height: 1.4),
+              style: GoogleFonts.lexend(height: 1.4),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text(
+                child: Text(
                   'Tidak',
-                  style: TextStyle(
+                  style: GoogleFonts.lexend(
                     color: Colors.grey,
                     fontWeight: FontWeight.bold,
                   ),
@@ -107,14 +109,14 @@ class _CheckoutPageState extends State<CheckoutPage>
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A2235),
+                  backgroundColor: AppTheme.primaryBlue,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Izinkan',
-                  style: TextStyle(
+                  style: GoogleFonts.lexend(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
@@ -274,6 +276,74 @@ class _CheckoutPageState extends State<CheckoutPage>
     }
   }
 
+  /// Konfirmasi handoff ke pihak ketiga
+  Future<void> _showDeliveryHandoffConfirmation(
+      String serviceId, String appName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              serviceId == 'gosend' ? Icons.two_wheeler : Icons.delivery_dining,
+              color: AppTheme.primaryBlue,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Konfirmasi Kurir',
+              style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          'Anda memilih pengiriman via $serviceName. Setelah mengonfirmasi pesanan, Anda akan diarahkan untuk memesan kurir di aplikasi $appName secara mandiri. Lanjutkan?',
+          style: GoogleFonts.lexend(height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.lexend(
+                color: Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Lanjutkan',
+              style: GoogleFonts.lexend(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      _placeOrder();
+    }
+  }
+
+  String get serviceName {
+    if (_selectedService == 'gosend') return 'GoSend';
+    if (_selectedService == 'grab_express') return 'Grab Express';
+    return 'COD (Ketemuan)';
+  }
+
   /// Proses pemesanan
   Future<void> _placeOrder() async {
     final currentUser = _auth.currentUser;
@@ -330,8 +400,7 @@ class _CheckoutPageState extends State<CheckoutPage>
 
     try {
       await _dbService.placeOrder(
-        productId:
-            widget.product.id, // Sinkronisasi dengan DatabaseService terbaru
+        productId: widget.product.id,
         name: widget.product.name,
         price: widget.product.price,
         category: widget.product.category,
@@ -399,25 +468,25 @@ class _CheckoutPageState extends State<CheckoutPage>
                     borderRadius: BorderRadius.circular(40),
                   ),
                   child: const Icon(
-                    Icons.check_circle,
+                    Icons.check_circle_rounded,
                     color: Color(0xFF2E7D32),
                     size: 48,
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Booking Berhasil! 🎉',
-                  style: TextStyle(
+                Text(
+                  'Pemesanan Berhasil! 🎉',
+                  style: GoogleFonts.lexend(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A2235),
+                    color: AppTheme.darkNavy,
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Pesanan COD Anda sudah tercatat di sistem ReUsea. Silakan hubungi penjual via Chat untuk menentukan tempat dan waktu ketemuan di Kampus!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: GoogleFonts.lexend(
                     color: Colors.grey[600],
                     fontSize: 14,
                     height: 1.5,
@@ -433,14 +502,14 @@ class _CheckoutPageState extends State<CheckoutPage>
                       Navigator.pop(context); // Kembali ke halaman utama
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1A2235),
+                      backgroundColor: AppTheme.primaryBlue,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Selesai',
-                      style: TextStyle(
+                      style: GoogleFonts.lexend(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
@@ -478,25 +547,25 @@ class _CheckoutPageState extends State<CheckoutPage>
                   borderRadius: BorderRadius.circular(40),
                 ),
                 child: const Icon(
-                  Icons.check_circle,
+                  Icons.check_circle_rounded,
                   color: Color(0xFF2E7D32),
                   size: 48,
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Pesanan Berhasil! 🎉',
-                style: TextStyle(
+                style: GoogleFonts.lexend(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2235),
+                  color: AppTheme.darkNavy,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
                 'Pesananmu sudah tercatat. Buka $appName untuk memesan $serviceName dan kirimkan barangmu!',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: GoogleFonts.lexend(
                   color: Colors.grey[600],
                   fontSize: 14,
                   height: 1.5,
@@ -524,7 +593,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                   ),
                   label: Text(
                     'Buka $appName',
-                    style: const TextStyle(
+                    style: GoogleFonts.lexend(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -546,9 +615,9 @@ class _CheckoutPageState extends State<CheckoutPage>
                   Navigator.pop(context);
                   Navigator.pop(context);
                 },
-                child: const Text(
+                child: Text(
                   'Nanti Saja',
-                  style: TextStyle(
+                  style: GoogleFonts.lexend(
                     color: Colors.grey,
                     fontWeight: FontWeight.w600,
                   ),
@@ -583,58 +652,64 @@ class _CheckoutPageState extends State<CheckoutPage>
     double totalPrice = productPrice + selectedFee;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F1EE),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.black,
-            size: 20,
+        leading: Container(
+          margin: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.8),
+            shape: BoxShape.circle,
+            boxShadow: AppTheme.softShadow(),
           ),
-          onPressed: () => Navigator.pop(context),
+          child: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppTheme.darkNavy,
+              size: 16,
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        title: const Text(
+        title: Text(
           'Checkout',
-          style: TextStyle(
-            color: Color(0xFF1E293B),
-            fontWeight: FontWeight.bold,
+          style: GoogleFonts.lexend(
+            color: AppTheme.darkNavy,
+            fontWeight: FontWeight.w900,
             fontSize: 20,
           ),
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: Colors.grey.withValues(alpha: 0.1),
-            height: 1,
-          ),
-        ),
       ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildProductSummary(),
-              const SizedBox(height: 16),
+      body: OceanGradientBackground(
+        child: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildProductSummary(),
+                  const SizedBox(height: 16),
 
-              // Alamat disembunyikan / opsional jika memilih COD kampus
-              if (_selectedService != 'cod') ...[
-                _buildAddressSection(),
-                const SizedBox(height: 16),
-              ],
+                  // Alamat disembunyikan / opsional jika memilih COD kampus
+                  if (_selectedService != 'cod') ...[
+                    _buildAddressSection(),
+                    const SizedBox(height: 16),
+                  ],
 
-              _buildDeliveryServiceSection(),
-              const SizedBox(height: 16),
-              _buildCostSummary(productPrice, selectedFee, totalPrice),
-              const SizedBox(height: 24),
-              _buildOrderButton(),
-              const SizedBox(height: 16),
-            ],
+                  _buildDeliveryServiceSection(),
+                  const SizedBox(height: 16),
+                  _buildCostSummary(productPrice, selectedFee, totalPrice),
+                  const SizedBox(height: 28),
+                  _buildOrderButton(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -645,20 +720,14 @@ class _CheckoutPageState extends State<CheckoutPage>
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.softShadow(),
       ),
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             child: widget.product.imagePath.startsWith('http')
                 ? Image.network(
                     widget.product.imagePath,
@@ -668,53 +737,53 @@ class _CheckoutPageState extends State<CheckoutPage>
                     errorBuilder: (c, e, s) => Container(
                       width: 85,
                       height: 85,
-                      color: const Color(0xFFF2F1EE),
-                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                      color: const Color(0xFFF2F4F7),
+                      child: const Icon(Icons.broken_image_rounded, color: Colors.grey),
                     ),
                   )
                 : Container(
                     width: 85,
                     height: 85,
-                    color: const Color(0xFFF2F1EE),
+                    color: const Color(0xFFF2F4F7),
                     child: const Icon(
                       Icons.shopping_bag_outlined,
-                      color: Color(0xFF1A2235),
+                      color: AppTheme.primaryBlue,
                       size: 36,
                     ),
                   ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.product.name,
-                  style: const TextStyle(
+                  style: GoogleFonts.lexend(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: Color(0xFF1E293B),
+                    color: AppTheme.darkNavy,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                        horizontal: 8,
+                        vertical: 3,
                       ),
                       decoration: BoxDecoration(
                         color: widget.product.condition == 'Baru'
                             ? const Color(0xFFE8F5E9)
                             : const Color(0xFFFFF3E0),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         widget.product.condition,
-                        style: TextStyle(
+                        style: GoogleFonts.lexend(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: widget.product.condition == 'Baru'
@@ -723,20 +792,23 @@ class _CheckoutPageState extends State<CheckoutPage>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Text(
                       widget.product.category,
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: GoogleFonts.lexend(
+                        fontSize: 11,
+                        color: AppTheme.secondaryBlue,
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   widget.product.price,
-                  style: const TextStyle(
+                  style: GoogleFonts.lexend(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A2235),
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryBlue,
                   ),
                 ),
               ],
@@ -751,16 +823,10 @@ class _CheckoutPageState extends State<CheckoutPage>
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.softShadow(),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -770,51 +836,52 @@ class _CheckoutPageState extends State<CheckoutPage>
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE3F2FD),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.location_on,
-                  color: Color(0xFF1565C0),
+                  Icons.location_on_rounded,
+                  color: AppTheme.primaryBlue,
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 10),
-              const Text(
+              const SizedBox(width: 12),
+              Text(
                 'Alamat Pengiriman',
-                style: TextStyle(
+                style: GoogleFonts.lexend(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: AppTheme.darkNavy,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           TextField(
             controller: _addressController,
             focusNode: _addressFocusNode,
             maxLines: 2,
+            style: GoogleFonts.lexend(fontSize: 14, color: AppTheme.darkNavy),
             decoration: InputDecoration(
               hintText: 'Masukkan alamat lengkap pengiriman...',
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              hintStyle: GoogleFonts.lexend(color: Colors.grey[400], fontSize: 13),
               filled: true,
-              fillColor: const Color(0xFFF8F8F6),
+              fillColor: const Color(0xFFF8F9FB),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: const BorderSide(
-                  color: Color(0xFF1A2235),
+                  color: AppTheme.primaryBlue,
                   width: 1.5,
                 ),
               ),
-              contentPadding: const EdgeInsets.all(14),
+              contentPadding: const EdgeInsets.all(16),
             ),
             onSubmitted: (_) => _geocodeManualAddress(),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -826,20 +893,20 @@ class _CheckoutPageState extends State<CheckoutPage>
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Color(0xFF1A2235),
+                            color: AppTheme.primaryBlue,
                           ),
                         )
-                      : const Icon(Icons.search, size: 18),
-                  label: const Text(
+                      : const Icon(Icons.search_rounded, size: 18),
+                  label: Text(
                     'Cari Alamat',
-                    style: TextStyle(fontSize: 13),
+                    style: GoogleFonts.lexend(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF1A2235),
-                    side: const BorderSide(color: Color(0xFF1A2235)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    foregroundColor: AppTheme.primaryBlue,
+                    side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
@@ -849,16 +916,16 @@ class _CheckoutPageState extends State<CheckoutPage>
                 child: OutlinedButton.icon(
                   onPressed: _openMapPicker,
                   icon: const Icon(Icons.map_outlined, size: 18),
-                  label: const Text(
+                  label: Text(
                     'Pilih Peta',
-                    style: TextStyle(fontSize: 13),
+                    style: GoogleFonts.lexend(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF1565C0),
-                    side: const BorderSide(color: Color(0xFF1565C0)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: Color(0xFF1565C0), width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
@@ -866,8 +933,8 @@ class _CheckoutPageState extends State<CheckoutPage>
               const SizedBox(width: 8),
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF2E7D32)),
-                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF2E7D32), width: 1.5),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: IconButton(
                   onPressed: _isLoadingLocation ? null : _useCurrentLocation,
@@ -881,7 +948,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                           ),
                         )
                       : const Icon(
-                          Icons.my_location,
+                          Icons.my_location_rounded,
                           color: Color(0xFF2E7D32),
                           size: 20,
                         ),
@@ -892,21 +959,21 @@ class _CheckoutPageState extends State<CheckoutPage>
           ),
           if (_buyerLat != null && _buyerLng != null)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.only(top: 12),
               child: Row(
                 children: [
                   const Icon(
-                    Icons.check_circle,
+                    Icons.check_circle_rounded,
                     color: Color(0xFF2E7D32),
-                    size: 16,
+                    size: 18,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Text(
-                    'Koordinat: ${_buyerLat!.toStringAsFixed(4)}, ${_buyerLng!.toStringAsFixed(4)}',
-                    style: const TextStyle(
-                      color: Color(0xFF2E7D32),
+                    'Koordinat Terkunci: ${_buyerLat!.toStringAsFixed(4)}, ${_buyerLng!.toStringAsFixed(4)}',
+                    style: GoogleFonts.lexend(
+                      color: const Color(0xFF2E7D32),
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -921,16 +988,10 @@ class _CheckoutPageState extends State<CheckoutPage>
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.softShadow(),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -940,70 +1001,68 @@ class _CheckoutPageState extends State<CheckoutPage>
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF3E0),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.local_shipping,
+                  Icons.local_shipping_rounded,
                   color: Color(0xFFE65100),
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 10),
-              const Text(
+              const SizedBox(width: 12),
+              Text(
                 'Jasa Pengiriman',
-                style: TextStyle(
+                style: GoogleFonts.lexend(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: AppTheme.darkNavy,
                 ),
               ),
             ],
           ),
           if (_distanceKm != null && _selectedService != 'cod')
             Padding(
-              padding: const EdgeInsets.only(top: 6, left: 38),
+              padding: const EdgeInsets.only(top: 8, left: 40),
               child: Text(
                 'Jarak estimasi: ${_distanceKm!.toStringAsFixed(1)} km',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: GoogleFonts.lexend(fontSize: 12, color: AppTheme.secondaryBlue),
               ),
             ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           _buildDeliveryCard(
             serviceId: 'gosend',
             serviceName: 'GoSend',
             appName: 'Gojek',
-            description: 'Instant Courier • 1-2 jam sampai',
+            description: 'Kurir Instan • 1-2 jam sampai',
             fee: _goSendFee,
-            iconData: Icons.two_wheeler,
+            iconData: Icons.two_wheeler_rounded,
             brandColor: const Color(0xFF00880F),
             bgColor: const Color(0xFFE8F5E9),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           _buildDeliveryCard(
             serviceId: 'grab_express',
             serviceName: 'Grab Express',
             appName: 'Grab',
-            description: 'Express Delivery • 1-2 jam sampai',
+            description: 'Pengiriman Ekspres • 1-2 jam sampai',
             fee: _grabExpressFee,
-            iconData: Icons.delivery_dining,
+            iconData: Icons.delivery_dining_rounded,
             brandColor: const Color(0xFF00B14F),
             bgColor: const Color(0xFFE0F2E9),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
-          // INTEGRASI OPSI BARU: COD KAMPUS UNESA (Jade Green Theme)
           _buildDeliveryCard(
             serviceId: 'cod',
             serviceName: 'COD (Ketemuan Langsung)',
             appName: 'Kampus',
-            description:
-                'Ketemuan langsung gratis ongkir di area sekitar UNESA',
+            description: 'Ketemuan langsung gratis ongkir di area UNESA',
             fee: 0,
-            iconData: Icons.people_outline,
-            brandColor: const Color(0xFF00B359),
-            bgColor: const Color(0xFFE8F5E9),
+            iconData: Icons.people_alt_rounded,
+            brandColor: AppTheme.primaryBlue,
+            bgColor: const Color(0xFFE8EAF6),
           ),
         ],
       ),
@@ -1031,12 +1090,12 @@ class _CheckoutPageState extends State<CheckoutPage>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? bgColor.withValues(alpha: 0.5)
-              : const Color(0xFFF8F8F6),
-          borderRadius: BorderRadius.circular(14),
+              ? bgColor.withValues(alpha: 0.4)
+              : const Color(0xFFF8F9FB),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? brandColor : Colors.transparent,
             width: 2,
@@ -1050,8 +1109,8 @@ class _CheckoutPageState extends State<CheckoutPage>
               decoration: BoxDecoration(
                 color: isSelected
                     ? brandColor.withValues(alpha: 0.15)
-                    : Colors.grey.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                    : Colors.grey.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 iconData,
@@ -1059,7 +1118,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                 size: 26,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1068,39 +1127,37 @@ class _CheckoutPageState extends State<CheckoutPage>
                     children: [
                       Text(
                         serviceName,
-                        style: TextStyle(
+                        style: GoogleFonts.lexend(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: isSelected
-                              ? brandColor
-                              : const Color(0xFF1E293B),
+                          color: isSelected ? brandColor : AppTheme.darkNavy,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.1),
+                          color: Colors.black.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           appName,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w600,
+                          style: GoogleFonts.lexend(
+                            fontSize: 9,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     description,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: GoogleFonts.lexend(fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -1112,22 +1169,22 @@ class _CheckoutPageState extends State<CheckoutPage>
                   serviceId == 'cod'
                       ? 'Gratis'
                       : (_hasCalculatedFee
-                            ? DeliveryService.formatRupiah(fee)
-                            : '—'),
-                  style: TextStyle(
+                          ? DeliveryService.formatRupiah(fee)
+                          : '—'),
+                  style: GoogleFonts.lexend(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    color: isSelected ? brandColor : const Color(0xFF1E293B),
+                    color: isSelected ? brandColor : AppTheme.darkNavy,
                   ),
                 ),
                 if (!_hasCalculatedFee && serviceId != 'cod')
                   Text(
                     'Isi alamat dulu',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+                    style: GoogleFonts.lexend(fontSize: 10, color: Colors.grey[400]),
                   ),
               ],
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 10),
             AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               width: 22,
@@ -1166,16 +1223,10 @@ class _CheckoutPageState extends State<CheckoutPage>
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.softShadow(),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1185,64 +1236,64 @@ class _CheckoutPageState extends State<CheckoutPage>
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF3E5F5),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.receipt_long,
+                  Icons.receipt_long_rounded,
                   color: Color(0xFF7B1FA2),
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 10),
-              const Text(
+              const SizedBox(width: 12),
+              Text(
                 'Ringkasan Biaya',
-                style: TextStyle(
+                style: GoogleFonts.lexend(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: AppTheme.darkNavy,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _buildCostRow(
             'Harga Barang',
             DeliveryService.formatRupiah(productPrice),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _buildCostRow(
-            'Ongkos Kirim (${_selectedService == 'gosend' ? 'GoSend' : (_selectedService == 'grab_express' ? 'Grab Express' : 'COD Kampus')})',
+            'Ongkos Kirim ($serviceName)',
             _selectedService == 'cod'
                 ? 'Rp 0'
                 : (_hasCalculatedFee
-                      ? DeliveryService.formatRupiah(selectedFee)
-                      : '—'),
+                    ? DeliveryService.formatRupiah(selectedFee)
+                    : '—'),
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
+            padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(height: 1),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total',
-                style: TextStyle(
+              Text(
+                'Total Pembayaran',
+                style: GoogleFonts.lexend(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Color(0xFF1E293B),
+                  fontSize: 15,
+                  color: AppTheme.darkNavy,
                 ),
               ),
               Text(
                 _selectedService == 'cod'
                     ? DeliveryService.formatRupiah(productPrice)
                     : (_hasCalculatedFee
-                          ? DeliveryService.formatRupiah(totalPrice)
-                          : '—'),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+                        ? DeliveryService.formatRupiah(totalPrice)
+                        : '—'),
+                style: GoogleFonts.lexend(
+                  fontWeight: FontWeight.w800,
                   fontSize: 18,
-                  color: Color(0xFF1A2235),
+                  color: AppTheme.primaryBlue,
                 ),
               ),
             ],
@@ -1256,13 +1307,13 @@ class _CheckoutPageState extends State<CheckoutPage>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+        Text(label, style: GoogleFonts.lexend(fontSize: 14, color: AppTheme.secondaryBlue)),
         Text(
           value,
-          style: const TextStyle(
+          style: GoogleFonts.lexend(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E293B),
+            color: AppTheme.darkNavy,
           ),
         ),
       ],
@@ -1270,22 +1321,29 @@ class _CheckoutPageState extends State<CheckoutPage>
   }
 
   Widget _buildOrderButton() {
-    String serviceName;
-
-    // Penentuan Label Dinamis Tombol Bawah
+    String label;
     if (_selectedService == 'gosend') {
-      serviceName = 'GoSend';
+      label = 'Pesan via GoSend';
     } else if (_selectedService == 'grab_express') {
-      serviceName = 'Grab Express';
+      label = 'Pesan via Grab Express';
     } else {
-      serviceName = 'COD (Ketemuan)';
+      label = 'Konfirmasi COD';
     }
 
     return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton.icon(
-        onPressed: _isPlacingOrder ? null : _placeOrder,
+        onPressed: _isPlacingOrder
+            ? null
+            : () {
+                if (_selectedService == 'cod') {
+                  _placeOrder();
+                } else {
+                  String appName = _selectedService == 'gosend' ? 'Gojek' : 'Grab';
+                  _showDeliveryHandoffConfirmation(_selectedService, appName);
+                }
+              },
         icon: _isPlacingOrder
             ? const SizedBox(
                 width: 20,
@@ -1295,23 +1353,21 @@ class _CheckoutPageState extends State<CheckoutPage>
                   color: Colors.white,
                 ),
               )
-            : const Icon(Icons.shopping_cart_checkout, color: Colors.white),
+            : const Icon(Icons.shopping_cart_checkout_rounded, color: Colors.white),
         label: Text(
-          _isPlacingOrder ? 'Memproses Pesanan...' : 'Pesan via $serviceName',
-          style: const TextStyle(
+          _isPlacingOrder ? 'Memproses Pesanan...' : label,
+          style: GoogleFonts.lexend(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A2235),
-          disabledBackgroundColor: const Color(
-            0xFF1A2235,
-          ).withValues(alpha: 0.6),
+          backgroundColor: AppTheme.primaryBlue,
+          disabledBackgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.6),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),

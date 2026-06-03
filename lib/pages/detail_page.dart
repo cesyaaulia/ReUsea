@@ -192,16 +192,18 @@ class _DetailPageState extends State<DetailPage> {
               Positioned(
                 top: MediaQuery.of(context).padding.top + 10,
                 left: 20,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white70,
-                  ),
+                child: ClipOval(
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.darkNavy, size: 20),
-                      onPressed: () => Navigator.pop(context),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.darkNavy, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     ),
                   ),
                 ),
