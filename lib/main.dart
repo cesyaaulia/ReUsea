@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/pages/login_page.dart';
 import 'package:reusea/pages/main_navigation.dart';
 import 'firebase_options.dart';
+import 'dart:ui';
 
 void main() async {
   // Overiding target platform ke android di web agar google_maps_flutter_web terdaftar
@@ -35,6 +36,11 @@ class ReUseaApp extends StatelessWidget {
             const LoginPage(), // Daftarkan rute login di sini
       },
       debugShowCheckedModeBanner: false,
+
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+      ),
+
       theme: ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFF2F1EE),
@@ -53,9 +59,7 @@ class ReUseaApp extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF1A2235),
-                ),
+                child: CircularProgressIndicator(color: Color(0xFF1A2235)),
               ),
             );
           }

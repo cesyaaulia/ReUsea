@@ -86,9 +86,12 @@ class _MyItemsPageState extends State<MyItemsPage> {
               }
 
               var myProductsDocs =
-                  snapshot.data?.docs
-                      .where((doc) => doc['sellerId'] == currentUserId)
-                      .toList() ??
+                  snapshot.data?.docs.where((doc) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    String sellerId = data['sellerId'] ?? '';
+                    String status = data['status'] ?? 'Available';
+                    return sellerId == currentUserId && status != 'Completed';
+                  }).toList() ??
                   [];
 
               if (myProductsDocs.isEmpty) {

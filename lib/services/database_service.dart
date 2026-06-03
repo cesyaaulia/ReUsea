@@ -11,11 +11,8 @@ class DatabaseService {
   // ====================================================================
   // 1. MANAJEMEN NOTIFIKASI SYSTEM (NOTIFICATION LOGIC)
   // ====================================================================
-
-  /// Membuat dokumen pemberitahuan baru di Firestore
   Future<void> createNotification({
-    required String
-    receiverId, // UID penerima khusus, atau isi 'ALL' untuk notif global
+    required String receiverId,
     required String title,
     required String message,
   }) async {
@@ -34,7 +31,6 @@ class DatabaseService {
     }
   }
 
-  /// Membaca aliran real-time pesan notifikasi yang belum dibaca
   Stream<QuerySnapshot> getUnreadNotificationsStream(String userId) {
     return _db
         .collection('notifications')
@@ -45,15 +41,12 @@ class DatabaseService {
   // ====================================================================
   // 2. MANAJEMEN PRODUK KAMPUS (PRODUCT LOGIC)
   // ====================================================================
-
-  /// Mengunggah satu gambar dagangan ke Firebase Storage dalam bentuk format byte
   Future<String> uploadProductImage(
     Uint8List imageBytes,
     String productId, {
     int index = 0,
   }) async {
     try {
-      // Setiap foto diberi nama unik berdasarkan productId dan index
       Reference ref = _storage
           .ref()
           .child('products')
@@ -66,7 +59,6 @@ class DatabaseService {
     }
   }
 
-  /// Mengunggah multiple gambar produk dan mengembalikan list URL
   Future<List<String>> uploadProductImages(
     List<Uint8List> imageBytesList,
     String productId,
@@ -83,7 +75,6 @@ class DatabaseService {
     return urls;
   }
 
-  /// Mengunggah item dagangan baru ke Firestore beserta trigger notifikasi global
   Future<void> uploadProduct({
     required String name,
     required String price,
@@ -93,7 +84,6 @@ class DatabaseService {
     required String sellerId,
     required String condition,
     required List<Uint8List>? imageBytesList,
-    // Legacy support: masih terima imageBytes tunggal
     Uint8List? imageBytes,
     required Function() onSuccess,
     required Function(String) onError,
@@ -103,17 +93,14 @@ class DatabaseService {
       List<String> imageUrls = [];
       String mainImageUrl = 'assets/images/profile_placeholder.png';
 
-      // Upload multi-foto jika ada
       if (imageBytesList != null && imageBytesList.isNotEmpty) {
         imageUrls = await uploadProductImages(imageBytesList, docRef.id);
         mainImageUrl = imageUrls.first;
       } else if (imageBytes != null) {
-        // Fallback: single image (backward-compatible)
         mainImageUrl = await uploadProductImage(imageBytes, docRef.id);
         imageUrls = [mainImageUrl];
       }
 
-      // Tarik info nama & foto profil asli uploader dari sistem login Auth
       final user = _auth.currentUser;
       String sellerName =
           user?.displayName ?? user?.email?.split('@')[0] ?? 'Mahasiswa UNESA';
@@ -130,12 +117,12 @@ class DatabaseService {
         'sellerId': sellerId,
         'sellerName': sellerName,
         'sellerPhoto': sellerPhoto,
-        'imagePath': mainImageUrl, // Backward-compatible: foto utama
-        'imageUrls': imageUrls, // Array semua foto produk
+        'imagePath': mainImageUrl,
+        'imageUrls': imageUrls,
+        'status': 'Available',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // TRIGGER NOTIFIKASI: Kabari seluruh mahasiswa UNESA bahwa ada barang baru terunggah
       await createNotification(
         receiverId: 'ALL',
         title: 'Produk Baru Di-upload!',
@@ -149,7 +136,6 @@ class DatabaseService {
     }
   }
 
-  /// Memperbarui rincian detail barang dagangan yang sudah ada di database
   Future<void> updateProduct({
     required String productId,
     required String name,
@@ -160,7 +146,6 @@ class DatabaseService {
     required String condition,
     required List<Uint8List>? newImageBytesList,
     required List<String> existingImageUrls,
-    // Legacy support
     Uint8List? newImageBytes,
     String? existingImageUrl,
     required Function() onSuccess,
@@ -169,7 +154,6 @@ class DatabaseService {
     try {
       List<String> finalImageUrls = List<String>.from(existingImageUrls);
 
-      // Upload foto baru (jika ada) dan append ke list
       if (newImageBytesList != null && newImageBytesList.isNotEmpty) {
         int startIndex = finalImageUrls.length;
         for (int i = 0; i < newImageBytesList.length; i++) {
@@ -181,7 +165,6 @@ class DatabaseService {
           finalImageUrls.add(url);
         }
       } else if (newImageBytes != null) {
-        // Fallback: single image update
         String url = await uploadProductImage(newImageBytes, productId);
         finalImageUrls = [url];
       }
@@ -215,16 +198,13 @@ class DatabaseService {
     }
   }
 
-  /// Menghapus produk dari Firestore beserta file gambarnya di Firebase Storage
   Future<void> deleteProduct(String productId) async {
     try {
-      // Coba hapus document dulu
       final doc = await _db.collection('products').doc(productId).get();
       final data = doc.data();
 
       await _db.collection('products').doc(productId).delete();
 
-      // Hapus semua foto terkait di Storage
       if (data != null && data['imageUrls'] != null) {
         List<String> urls = List<String>.from(data['imageUrls']);
         for (int i = 0; i < urls.length; i++) {
@@ -234,27 +214,14 @@ class DatabaseService {
                 .child('products')
                 .child('${productId}_$i.jpg')
                 .delete();
-          } catch (_) {
-            // Lanjut jika foto tertentu gagal dihapus
-          }
+          } catch (_) {}
         }
-      }
-      // Fallback: hapus foto lama format single
-      try {
-        await _storage
-            .ref()
-            .child('products')
-            .child('$productId.jpg')
-            .delete();
-      } catch (_) {
-        // Tidak perlu error jika file tidak ditemukan
       }
     } catch (e) {
       print('Info: Gagal menghapus produk atau fotonya: $e');
     }
   }
 
-  /// Stream utama untuk memuat data beranda marketplace (Home Grid)
   Stream<QuerySnapshot> getProductsStream() {
     return _db
         .collection('products')
@@ -266,8 +233,9 @@ class DatabaseService {
   // 3. MANAJEMEN ALUR TRANSAKSI MAHASISWA (ORDER LOGIC)
   // ====================================================================
 
-  /// Membuat pesanan pembelian baru di Firestore & mengirim notifikasi personal ke penjual
+  /// MERGE SUCCESS: Membuat order nota lengkap dengan data tracking maps delivery koordinat & set status barang 'Processing'
   Future<void> placeOrder({
+    required String productId,
     required String name,
     required String price,
     required String category,
@@ -278,7 +246,6 @@ class DatabaseService {
     required String sellerName,
     required String buyerId,
     required String buyerName,
-    // Field baru untuk pengiriman
     String buyerAddress = '',
     double buyerLat = 0,
     double buyerLng = 0,
@@ -293,6 +260,7 @@ class DatabaseService {
 
       await docRef.set({
         'id': docRef.id,
+        'productId': productId,
         'name': name,
         'price': price,
         'category': category.toUpperCase(),
@@ -309,11 +277,15 @@ class DatabaseService {
         'deliveryService': deliveryService,
         'deliveryFee': deliveryFee,
         'distanceKm': distanceKm,
-        'status': 'Processing', // Status mula-mula
+        'status': 'Processing',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // TRIGGER NOTIFIKASI: Kirim pesan khusus ke halaman penjual bahwa barangnya terbeli
+      // Sembunyikan produk sementara dari HomePage listing pasar
+      await _db.collection('products').doc(productId).update({
+        'status': 'Processing',
+      });
+
       await createNotification(
         receiverId: sellerId,
         title: 'Produk Anda Terjual! 🎉',
@@ -327,7 +299,6 @@ class DatabaseService {
     }
   }
 
-  /// Aliran data memuat riwayat produk yang dibeli user (Past Buys Screen)
   Stream<QuerySnapshot> getPastBuysStream(String userId) {
     return _db
         .collection('orders')
@@ -335,7 +306,6 @@ class DatabaseService {
         .snapshots();
   }
 
-  /// Aliran data memuat riwayat produk jualan user yang dibeli orang lain (Past Sells Screen)
   Stream<QuerySnapshot> getPastSellsStream(String userId) {
     return _db
         .collection('orders')
@@ -343,13 +313,52 @@ class DatabaseService {
         .snapshots();
   }
 
-  /// Memperbarui status pesanan mahasiswa (Processing -> Completed / Cancelled)
+  /// MERGE SUCCESS: Manajemen aksi update (Completed -> Hapus listing permanen & naikkan angka profile / Cancelled -> Pajang kembali)
   Future<void> updateOrderStatus(String orderId, String newStatus) async {
     try {
+      DocumentSnapshot orderSnap = await _db
+          .collection('orders')
+          .doc(orderId)
+          .get();
+      if (!orderSnap.exists) throw 'Data transaksi tidak ditemukan!';
+
+      var orderData = orderSnap.data() as Map<String, dynamic>;
+      String productId = orderData['productId'] ?? '';
+      String buyerId = orderData['buyerId'] ?? '';
+      String sellerId = orderData['sellerId'] ?? '';
+
       await _db.collection('orders').doc(orderId).update({
         'status': newStatus,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      if (newStatus == 'Completed') {
+        // Hapus permanen dari koleksi products beranda
+        if (productId.isNotEmpty) {
+          await _db.collection('products').doc(productId).update({
+            'status': 'Completed',
+          });
+        }
+        // Naikkan stat bought pembeli
+        if (buyerId.isNotEmpty) {
+          await _db.collection('users').doc(buyerId).update({
+            'bought': FieldValue.increment(1),
+          });
+        }
+        // Naikkan stat solds penjual
+        if (sellerId.isNotEmpty) {
+          await _db.collection('users').doc(sellerId).update({
+            'solds': FieldValue.increment(1),
+          });
+        }
+      } else if (newStatus == 'Cancelled') {
+        // Jika batal, kembalikan status produk menjadi Available agar mejeng lagi di Home
+        if (productId.isNotEmpty) {
+          await _db.collection('products').doc(productId).update({
+            'status': 'Available',
+          });
+        }
+      }
     } catch (e) {
       throw 'Gagal memperbarui status transaksi: $e';
     }
@@ -358,8 +367,6 @@ class DatabaseService {
   // ====================================================================
   // 4. MANAJEMEN CHAT REAL-TIME (CHAT LOGIC)
   // ====================================================================
-
-  /// Membuat atau mengambil room chat yang sudah ada antara pembeli dan penjual
   Future<String> getOrCreateChatRoom({
     required String buyerId,
     required String buyerName,
@@ -368,7 +375,6 @@ class DatabaseService {
     required String sellerName,
     required String sellerPhoto,
   }) async {
-    // roomId dibuat unik dengan mengurutkan UID secara alfabetis
     String roomId = buyerId.compareTo(sellerId) < 0
         ? '${buyerId}_$sellerId'
         : '${sellerId}_$buyerId';
@@ -380,25 +386,15 @@ class DatabaseService {
       await roomRef.set({
         'id': roomId,
         'participants': [buyerId, sellerId],
-        'participantNames': {
-          buyerId: buyerName,
-          sellerId: sellerName,
-        },
-        'participantPhotos': {
-          buyerId: buyerPhoto,
-          sellerId: sellerPhoto,
-        },
+        'participantNames': {buyerId: buyerName, sellerId: sellerName},
+        'participantPhotos': {buyerId: buyerPhoto, sellerId: sellerPhoto},
         'lastMessage': '',
         'lastMessageSenderId': '',
         'lastMessageTime': FieldValue.serverTimestamp(),
-        'unreadCount': {
-          buyerId: 0,
-          sellerId: 0,
-        },
+        'unreadCount': {buyerId: 0, sellerId: 0},
         'createdAt': FieldValue.serverTimestamp(),
       });
     } else {
-      // Update data nama & foto jikalau ada perubahan profile di user
       await roomRef.update({
         'participantNames.$buyerId': buyerName,
         'participantNames.$sellerId': sellerName,
@@ -409,8 +405,6 @@ class DatabaseService {
     return roomId;
   }
 
-  /// Mengirim pesan baru ke subcollection chat room
-  /// Mengunggah file (foto/video) ke Firebase Storage untuk chat room
   Future<String> uploadChatFile({
     required Uint8List fileBytes,
     required String roomId,
@@ -430,7 +424,6 @@ class DatabaseService {
     }
   }
 
-  /// Mengirim pesan baru ke subcollection chat room (mendukung teks, foto, dan video)
   Future<void> sendMessage({
     required String roomId,
     required String senderId,
@@ -463,15 +456,17 @@ class DatabaseService {
     if (roomSnapshot.exists) {
       Map<String, dynamic> data = roomSnapshot.data() as Map<String, dynamic>;
       List<dynamic> participants = data['participants'] ?? [];
-      String receiverId = participants.firstWhere((p) => p != senderId, orElse: () => '');
+      String receiverId = participants.firstWhere(
+        (p) => p != senderId,
+        orElse: () => '',
+      );
 
       String previewText = text.trim();
       if (previewText.isEmpty) {
-        if (imageUrl != null) {
+        if (imageUrl != null)
           previewText = '📷 Foto';
-        } else if (videoUrl != null) {
+        else if (videoUrl != null)
           previewText = '🎥 Video';
-        }
       }
 
       Map<String, dynamic> updateData = {
@@ -488,7 +483,6 @@ class DatabaseService {
     }
   }
 
-  /// Reset unread count untuk user di chat room tertentu
   Future<void> resetUnreadCount({
     required String roomId,
     required String userId,
@@ -502,7 +496,6 @@ class DatabaseService {
     }
   }
 
-  /// Stream untuk mendapatkan semua chat room yang diikuti oleh user
   Stream<QuerySnapshot> getChatRoomsStream(String userId) {
     return _db
         .collection('chat_rooms')
@@ -510,7 +503,6 @@ class DatabaseService {
         .snapshots();
   }
 
-  /// Stream untuk mendapatkan pesan-pesan dalam room chat tertentu
   Stream<QuerySnapshot> getMessagesStream(String roomId) {
     return _db
         .collection('chat_rooms')

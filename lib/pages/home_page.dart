@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE), // Warna krem background figma baru
+      backgroundColor: const Color(0xFFF2F1EE),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -37,9 +37,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
-          // ========================================================
-          // LIVE NOTIFICATION BADGE STREAMING
-          // ========================================================
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('notifications')
@@ -49,7 +46,6 @@ class _HomePageState extends State<HomePage> {
               int unreadCount = 0;
 
               if (snapshot.hasData) {
-                // Filter lokal untuk menghitung notifikasi akun pribadi atau publik ('ALL')
                 var filteredDocs = snapshot.data!.docs.where((doc) {
                   String receiverId = doc['receiverId'] ?? '';
                   return receiverId == currentUserId || receiverId == 'ALL';
@@ -71,9 +67,7 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    FadeScaleRoute(
-                      page: const NotificationPage(),
-                    ),
+                    FadeScaleRoute(page: const NotificationPage()),
                   );
                 },
               );
@@ -86,7 +80,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. BAR PENCARIAN (SEARCH BAR)
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -114,7 +107,6 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 25),
 
-            // 2. HORIZONTAL FILTER CHIPS BAR
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -141,7 +133,6 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 15),
 
-            // 3. DAFTAR GRID PRODUK UTAMA
             _buildGrid(),
           ],
         ),
@@ -149,7 +140,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Widget Pembuat Item Filter Chip Kategori
   Widget _buildCategoryChip(String label) {
     bool isSelected = _selectedCategory == label;
     return GestureDetector(
@@ -177,25 +167,21 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Widget Loader Pengumpul Grid dari Server Firestore (Real-Time Stream)
   Widget _buildGrid() {
     double screenWidth = MediaQuery.of(context).size.width;
 
     int crossAxisCount = 2;
-    double aspectRatio =
-        0.60; // PERBAIKAN: Dilonggarkan dari 0.64 ke 0.60 untuk layar HP kecil agar teks aman
+    double aspectRatio = 0.60;
 
-    // KALIBRASI RASIO RESPONSIVE AGAR AMAN DARI OVERFLOW DI SEMUA RESOLUSI
     if (screenWidth > 1200) {
       crossAxisCount = 5;
-      aspectRatio =
-          0.70; // Dioptimalkan dari 0.78 ke 0.70 (ruang teks web lebih lega)
+      aspectRatio = 0.70;
     } else if (screenWidth > 800) {
       crossAxisCount = 4;
-      aspectRatio = 0.68; // Dioptimalkan dari 0.75 ke 0.68
+      aspectRatio = 0.68;
     } else if (screenWidth > 600) {
       crossAxisCount = 3;
-      aspectRatio = 0.65; // Dioptimalkan dari 0.72 ke 0.65
+      aspectRatio = 0.65;
     }
 
     return StreamBuilder<QuerySnapshot>(
@@ -226,6 +212,13 @@ class _HomePageState extends State<HomePage> {
         }
 
         var productsDocs = snapshot.data!.docs;
+
+        // MERGE LOGIC: Sembunyikan barang dari list beranda jika berstatus Processing atau Completed
+        productsDocs = productsDocs.where((doc) {
+          var data = doc.data() as Map<String, dynamic>;
+          String status = data['status'] ?? 'Available';
+          return status != 'Processing' && status != 'Completed';
+        }).toList();
 
         if (_selectedCategory != "Semua") {
           productsDocs = productsDocs.where((doc) {
@@ -273,9 +266,7 @@ class _HomePageState extends State<HomePage> {
               onTap: () {
                 Navigator.push(
                   context,
-                  HeroFadeRoute(
-                    page: DetailPage(product: product),
-                  ),
+                  HeroFadeRoute(page: DetailPage(product: product)),
                 );
               },
               child: Container(
@@ -320,22 +311,11 @@ class _HomePageState extends State<HomePage> {
                                       ? product.imagePath
                                       : 'assets/images/profile_placeholder.png',
                                   fit: BoxFit.cover,
-                                  errorBuilder: (c, e, s) => Container(
-                                    color: const Color(0xFFF2F1EE),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.image_outlined,
-                                        color: Colors.grey,
-                                        size: 36,
-                                      ),
-                                    ),
-                                  ),
                                 ),
                         ),
                       ),
                     ),
 
-                    // SEKTOR INFORMASI TEXT (DIBERI PADDING DAN UKURAN AMAN)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,

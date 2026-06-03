@@ -5,7 +5,7 @@ import 'package:reusea/services/database_service.dart';
 import 'package:reusea/services/delivery_service.dart';
 import 'map_picker_page.dart';
 
-/// Halaman Checkout — Buyer memilih alamat pengiriman & jasa pengiriman
+/// Halaman Checkout — Buyer memilih alamat pengiriman & jasa pengiriman / COD
 class CheckoutPage extends StatefulWidget {
   final Product product;
 
@@ -74,47 +74,56 @@ class _CheckoutPageState extends State<CheckoutPage>
   /// Dialog Persetujuan Izin Lokasi
   Future<bool> _showLocationPermissionDialog() async {
     return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.location_on, color: Color(0xFF1A2235)),
-            SizedBox(width: 10),
-            Text(
-              'Akses Lokasi GPS',
-              style: TextStyle(fontWeight: FontWeight.bold),
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-          ],
-        ),
-        content: const Text(
-          'ReUsea memerlukan akses lokasi GPS Anda untuk mendeteksi posisi saat ini secara akurat dan mengisi alamat pengiriman secara otomatis. Apakah Anda mengizinkan?',
-          style: TextStyle(height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              'Tidak',
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            title: const Row(
+              children: [
+                Icon(Icons.location_on, color: Color(0xFF1A2235)),
+                SizedBox(width: 10),
+                Text(
+                  'Akses Lokasi GPS',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1A2235),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+            content: const Text(
+              'ReUsea memerlukan akses lokasi GPS Anda untuk mendeteksi posisi saat ini secara akurat dan mengisi alamat pengiriman secara otomatis. Apakah Anda mengizinkan?',
+              style: TextStyle(height: 1.4),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text(
+                  'Tidak',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-            child: const Text(
-              'Izinkan',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A2235),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Izinkan',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 
   /// Geocode lokasi seller dari string alamat
@@ -122,18 +131,18 @@ class _CheckoutPageState extends State<CheckoutPage>
     final coords = await DeliveryService.getCoordinatesFromAddress(
       '${widget.product.location}, Surabaya',
     );
-    if (mounted) {
+    if (coords != null && mounted) {
       setState(() {
-        if (coords != null) {
-          _sellerLat = coords['lat'];
-          _sellerLng = coords['lng'];
-        } else {
-          // Fallback: UNESA Lidah Wetan (Default kampus)
-          _sellerLat = -7.3013;
-          _sellerLng = 112.6738;
-        }
+        _sellerLat = coords['lat'];
+        _sellerLng = coords['lng'];
       });
       _recalculateIfReady();
+    } else {
+      setState(() {
+        // Fallback: UNESA Lidah Wetan (Default kampus)
+        _sellerLat = -7.3013;
+        _sellerLng = 112.6738;
+      });
     }
   }
 
@@ -183,7 +192,6 @@ class _CheckoutPageState extends State<CheckoutPage>
 
   /// Gunakan lokasi GPS saat ini
   Future<void> _useCurrentLocation() async {
-    // Tampilkan popup persetujuan izin lokasi terlebih dahulu
     final allowed = await _showLocationPermissionDialog();
     if (!allowed) {
       if (mounted) {
@@ -207,14 +215,15 @@ class _CheckoutPageState extends State<CheckoutPage>
         _buyerLng = position.longitude;
       });
 
-      // Reverse geocode untuk isi alamat otomatis
       String address = await DeliveryService.getAddressFromCoordinates(
         position.latitude,
         position.longitude,
       );
       if (mounted) {
         setState(() {
-          _addressController.text = address.isNotEmpty ? address : '${position.latitude}, ${position.longitude}';
+          _addressController.text = address.isNotEmpty
+              ? address
+              : '${position.latitude}, ${position.longitude}';
           _isLoadingLocation = false;
         });
       }
@@ -278,7 +287,8 @@ class _CheckoutPageState extends State<CheckoutPage>
       return;
     }
 
-    if (_addressController.text.trim().isEmpty) {
+    // Validasi alamat dilewati jika memilih opsi COD
+    if (_addressController.text.trim().isEmpty && _selectedService != 'cod') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Masukkan alamat pengiriman terlebih dahulu.'),
@@ -288,12 +298,11 @@ class _CheckoutPageState extends State<CheckoutPage>
       return;
     }
 
-    if (!_hasCalculatedFee) {
+    // Validasi estimasi ongkir dilewati jika memilih opsi COD
+    if (!_hasCalculatedFee && _selectedService != 'cod') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Estimasi ongkir belum dihitung. Cek alamat Anda.',
-          ),
+          content: Text('Estimasi ongkir belum dihitung. Cek alamat Anda.'),
           backgroundColor: Colors.orangeAccent,
         ),
       );
@@ -302,13 +311,27 @@ class _CheckoutPageState extends State<CheckoutPage>
 
     setState(() => _isPlacingOrder = true);
 
-    double selectedFee =
-        _selectedService == 'gosend' ? _goSendFee : _grabExpressFee;
-    String buyerName = currentUser.displayName ??
-        currentUser.email!.split('@')[0];
+    double selectedFee = 0;
+    String deliveryServiceName = 'COD (Ketemuan)';
+    String buyerFinalAddress = 'Ketemuan Langsung (COD di Kampus)';
+
+    if (_selectedService == 'gosend') {
+      selectedFee = _goSendFee;
+      deliveryServiceName = 'GoSend';
+      buyerFinalAddress = _addressController.text.trim();
+    } else if (_selectedService == 'grab_express') {
+      selectedFee = _grabExpressFee;
+      deliveryServiceName = 'Grab Express';
+      buyerFinalAddress = _addressController.text.trim();
+    }
+
+    String buyerName =
+        currentUser.displayName ?? currentUser.email!.split('@')[0];
 
     try {
       await _dbService.placeOrder(
+        productId:
+            widget.product.id, // Sinkronisasi dengan DatabaseService terbaru
         name: widget.product.name,
         price: widget.product.price,
         category: widget.product.category,
@@ -319,19 +342,15 @@ class _CheckoutPageState extends State<CheckoutPage>
         sellerName: widget.product.sellerName,
         buyerId: currentUser.uid,
         buyerName: buyerName,
-        buyerAddress: _addressController.text.trim(),
+        buyerAddress: buyerFinalAddress,
         buyerLat: _buyerLat ?? 0,
         buyerLng: _buyerLng ?? 0,
-        deliveryService: _selectedService == 'gosend'
-            ? 'GoSend'
-            : 'Grab Express',
+        deliveryService: deliveryServiceName,
         deliveryFee: selectedFee,
         distanceKm: _distanceKm ?? 0,
         onSuccess: () async {
           if (mounted) {
             setState(() => _isPlacingOrder = false);
-
-            // Tampilkan dialog sukses
             await _showSuccessDialog();
           }
         },
@@ -339,10 +358,7 @@ class _CheckoutPageState extends State<CheckoutPage>
           if (mounted) {
             setState(() => _isPlacingOrder = false);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(error),
-                backgroundColor: Colors.redAccent,
-              ),
+              SnackBar(content: Text(error), backgroundColor: Colors.redAccent),
             );
           }
         },
@@ -362,23 +378,98 @@ class _CheckoutPageState extends State<CheckoutPage>
 
   /// Dialog sukses setelah order berhasil
   Future<void> _showSuccessDialog() async {
-    String serviceName =
-        _selectedService == 'gosend' ? 'GoSend' : 'Grab Express';
+    if (_selectedService == 'cod') {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: Color(0xFF2E7D32),
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Booking Berhasil! 🎉',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A2235),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Pesanan COD Anda sudah tercatat di sistem ReUsea. Silakan hubungi penjual via Chat untuk menentukan tempat dan waktu ketemuan di Kampus!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Tutup dialog
+                      Navigator.pop(context); // Kembali ke halaman utama
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A2235),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Selesai',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    String serviceName = _selectedService == 'gosend'
+        ? 'GoSend'
+        : 'Grab Express';
     String appName = _selectedService == 'gosend' ? 'Gojek' : 'Grab';
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Ikon sukses animasi
               Container(
                 width: 80,
                 height: 80,
@@ -412,19 +503,17 @@ class _CheckoutPageState extends State<CheckoutPage>
                 ),
               ),
               const SizedBox(height: 24),
-              // Tombol Buka App
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.pop(context); // tutup dialog
+                    Navigator.pop(context);
                     if (_selectedService == 'gosend') {
                       DeliveryService.openGojekApp();
                     } else {
                       DeliveryService.openGrabApp();
                     }
-                    // Kembali ke halaman sebelumnya
                     Navigator.pop(context);
                   },
                   icon: Icon(
@@ -443,9 +532,8 @@ class _CheckoutPageState extends State<CheckoutPage>
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _selectedService == 'gosend'
-                        ? const Color(0xFF00880F) // Gojek green
-                        : const Color(0xFF00B14F), // Grab green
-                    elevation: 0,
+                        ? const Color(0xFF00880F)
+                        : const Color(0xFF00B14F),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -453,11 +541,10 @@ class _CheckoutPageState extends State<CheckoutPage>
                 ),
               ),
               const SizedBox(height: 10),
-              // Tombol kembali
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // tutup dialog
-                  Navigator.pop(context); // kembali ke detail
+                  Navigator.pop(context);
+                  Navigator.pop(context);
                 },
                 child: const Text(
                   'Nanti Saja',
@@ -474,20 +561,25 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // ============================================================
-  // PARSE HARGA DARI STRING (e.g. "Rp 150.000" → 150000)
-  // ============================================================
   double _parsePrice(String priceStr) {
-    String cleaned =
-        priceStr.replaceAll('Rp', '').replaceAll('.', '').replaceAll(' ', '');
+    String cleaned = priceStr
+        .replaceAll('Rp', '')
+        .replaceAll('.', '')
+        .replaceAll(' ', '');
     return double.tryParse(cleaned) ?? 0;
   }
 
   @override
   Widget build(BuildContext context) {
     double productPrice = _parsePrice(widget.product.price);
-    double selectedFee =
-        _selectedService == 'gosend' ? _goSendFee : _grabExpressFee;
+
+    double selectedFee = 0;
+    if (_selectedService == 'gosend') {
+      selectedFee = _goSendFee;
+    } else if (_selectedService == 'grab_express') {
+      selectedFee = _grabExpressFee;
+    }
+
     double totalPrice = productPrice + selectedFee;
 
     return Scaffold(
@@ -527,33 +619,19 @@ class _CheckoutPageState extends State<CheckoutPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ========================
-              // 1. RINGKASAN PRODUK
-              // ========================
               _buildProductSummary(),
               const SizedBox(height: 16),
 
-              // ========================
-              // 2. ALAMAT PENGIRIMAN
-              // ========================
-              _buildAddressSection(),
-              const SizedBox(height: 16),
+              // Alamat disembunyikan / opsional jika memilih COD kampus
+              if (_selectedService != 'cod') ...[
+                _buildAddressSection(),
+                const SizedBox(height: 16),
+              ],
 
-              // ========================
-              // 3. PILIH JASA PENGIRIMAN
-              // ========================
               _buildDeliveryServiceSection(),
               const SizedBox(height: 16),
-
-              // ========================
-              // 4. RINGKASAN BIAYA
-              // ========================
               _buildCostSummary(productPrice, selectedFee, totalPrice),
               const SizedBox(height: 24),
-
-              // ========================
-              // 5. TOMBOL PESAN
-              // ========================
               _buildOrderButton(),
               const SizedBox(height: 16),
             ],
@@ -563,9 +641,6 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // ============================================================
-  // WIDGET: Ringkasan Produk
-  // ============================================================
   Widget _buildProductSummary() {
     return Container(
       decoration: BoxDecoration(
@@ -582,7 +657,6 @@ class _CheckoutPageState extends State<CheckoutPage>
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          // Gambar produk
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: widget.product.imagePath.startsWith('http')
@@ -595,10 +669,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                       width: 85,
                       height: 85,
                       color: const Color(0xFFF2F1EE),
-                      child: const Icon(
-                        Icons.broken_image,
-                        color: Colors.grey,
-                      ),
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
                     ),
                   )
                 : Container(
@@ -613,7 +684,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                   ),
           ),
           const SizedBox(width: 14),
-          // Info produk
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -656,10 +726,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                     const SizedBox(width: 6),
                     Text(
                       widget.product.category,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -680,9 +747,6 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // ============================================================
-  // WIDGET: Alamat Pengiriman
-  // ============================================================
   Widget _buildAddressSection() {
     return Container(
       decoration: BoxDecoration(
@@ -726,7 +790,6 @@ class _CheckoutPageState extends State<CheckoutPage>
             ],
           ),
           const SizedBox(height: 14),
-          // Text field alamat
           TextField(
             controller: _addressController,
             focusNode: _addressFocusNode,
@@ -752,14 +815,11 @@ class _CheckoutPageState extends State<CheckoutPage>
             onSubmitted: (_) => _geocodeManualAddress(),
           ),
           const SizedBox(height: 12),
-          // Tombol aksi
           Row(
             children: [
-              // Tombol Cari Alamat
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed:
-                      _isLoadingLocation ? null : _geocodeManualAddress,
+                  onPressed: _isLoadingLocation ? null : _geocodeManualAddress,
                   icon: _isLoadingLocation
                       ? const SizedBox(
                           width: 16,
@@ -785,7 +845,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                 ),
               ),
               const SizedBox(width: 8),
-              // Tombol Pilih dari Peta
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _openMapPicker,
@@ -805,7 +864,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                 ),
               ),
               const SizedBox(width: 8),
-              // Tombol GPS
               Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: const Color(0xFF2E7D32)),
@@ -832,7 +890,6 @@ class _CheckoutPageState extends State<CheckoutPage>
               ),
             ],
           ),
-          // Indikator status alamat
           if (_buyerLat != null && _buyerLng != null)
             Padding(
               padding: const EdgeInsets.only(top: 10),
@@ -860,9 +917,6 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // ============================================================
-  // WIDGET: Pilih Jasa Pengiriman
-  // ============================================================
   Widget _buildDeliveryServiceSection() {
     return Container(
       decoration: BoxDecoration(
@@ -905,20 +959,16 @@ class _CheckoutPageState extends State<CheckoutPage>
               ),
             ],
           ),
-          if (_distanceKm != null)
+          if (_distanceKm != null && _selectedService != 'cod')
             Padding(
               padding: const EdgeInsets.only(top: 6, left: 38),
               child: Text(
                 'Jarak estimasi: ${_distanceKm!.toStringAsFixed(1)} km',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ),
           const SizedBox(height: 14),
 
-          // Card GoSend
           _buildDeliveryCard(
             serviceId: 'gosend',
             serviceName: 'GoSend',
@@ -931,7 +981,6 @@ class _CheckoutPageState extends State<CheckoutPage>
           ),
           const SizedBox(height: 10),
 
-          // Card Grab Express
           _buildDeliveryCard(
             serviceId: 'grab_express',
             serviceName: 'Grab Express',
@@ -941,6 +990,20 @@ class _CheckoutPageState extends State<CheckoutPage>
             iconData: Icons.delivery_dining,
             brandColor: const Color(0xFF00B14F),
             bgColor: const Color(0xFFE0F2E9),
+          ),
+          const SizedBox(height: 10),
+
+          // INTEGRASI OPSI BARU: COD KAMPUS UNESA (Jade Green Theme)
+          _buildDeliveryCard(
+            serviceId: 'cod',
+            serviceName: 'COD (Ketemuan Langsung)',
+            appName: 'Kampus',
+            description:
+                'Ketemuan langsung gratis ongkir di area sekitar UNESA',
+            fee: 0,
+            iconData: Icons.people_outline,
+            brandColor: const Color(0xFF00B359),
+            bgColor: const Color(0xFFE8F5E9),
           ),
         ],
       ),
@@ -970,7 +1033,9 @@ class _CheckoutPageState extends State<CheckoutPage>
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? bgColor.withValues(alpha: 0.5) : const Color(0xFFF8F8F6),
+          color: isSelected
+              ? bgColor.withValues(alpha: 0.5)
+              : const Color(0xFFF8F8F6),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected ? brandColor : Colors.transparent,
@@ -979,7 +1044,6 @@ class _CheckoutPageState extends State<CheckoutPage>
         ),
         child: Row(
           children: [
-            // Icon / Logo
             Container(
               width: 48,
               height: 48,
@@ -996,7 +1060,6 @@ class _CheckoutPageState extends State<CheckoutPage>
               ),
             ),
             const SizedBox(width: 12),
-            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1008,8 +1071,9 @@ class _CheckoutPageState extends State<CheckoutPage>
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color:
-                              isSelected ? brandColor : const Color(0xFF1E293B),
+                          color: isSelected
+                              ? brandColor
+                              : const Color(0xFF1E293B),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -1036,40 +1100,34 @@ class _CheckoutPageState extends State<CheckoutPage>
                   const SizedBox(height: 2),
                   Text(
                     description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],
               ),
             ),
-            // Harga
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _hasCalculatedFee
-                      ? DeliveryService.formatRupiah(fee)
-                      : '—',
+                  serviceId == 'cod'
+                      ? 'Gratis'
+                      : (_hasCalculatedFee
+                            ? DeliveryService.formatRupiah(fee)
+                            : '—'),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                     color: isSelected ? brandColor : const Color(0xFF1E293B),
                   ),
                 ),
-                if (!_hasCalculatedFee)
+                if (!_hasCalculatedFee && serviceId != 'cod')
                   Text(
                     'Isi alamat dulu',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[400],
-                    ),
+                    style: TextStyle(fontSize: 10, color: Colors.grey[400]),
                   ),
               ],
             ),
             const SizedBox(width: 6),
-            // Radio indicator
             AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               width: 22,
@@ -1100,9 +1158,6 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // ============================================================
-  // WIDGET: Ringkasan Biaya
-  // ============================================================
   Widget _buildCostSummary(
     double productPrice,
     double selectedFee,
@@ -1150,24 +1205,23 @@ class _CheckoutPageState extends State<CheckoutPage>
             ],
           ),
           const SizedBox(height: 14),
-          // Harga barang
           _buildCostRow(
             'Harga Barang',
             DeliveryService.formatRupiah(productPrice),
           ),
           const SizedBox(height: 8),
-          // Ongkir
           _buildCostRow(
-            'Ongkos Kirim (${_selectedService == 'gosend' ? 'GoSend' : 'Grab Express'})',
-            _hasCalculatedFee
-                ? DeliveryService.formatRupiah(selectedFee)
-                : '—',
+            'Ongkos Kirim (${_selectedService == 'gosend' ? 'GoSend' : (_selectedService == 'grab_express' ? 'Grab Express' : 'COD Kampus')})',
+            _selectedService == 'cod'
+                ? 'Rp 0'
+                : (_hasCalculatedFee
+                      ? DeliveryService.formatRupiah(selectedFee)
+                      : '—'),
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
             child: Divider(height: 1),
           ),
-          // Total
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1180,9 +1234,11 @@ class _CheckoutPageState extends State<CheckoutPage>
                 ),
               ),
               Text(
-                _hasCalculatedFee
-                    ? DeliveryService.formatRupiah(totalPrice)
-                    : '—',
+                _selectedService == 'cod'
+                    ? DeliveryService.formatRupiah(productPrice)
+                    : (_hasCalculatedFee
+                          ? DeliveryService.formatRupiah(totalPrice)
+                          : '—'),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -1200,13 +1256,7 @@ class _CheckoutPageState extends State<CheckoutPage>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
         Text(
           value,
           style: const TextStyle(
@@ -1219,12 +1269,17 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // ============================================================
-  // WIDGET: Tombol Pesan
-  // ============================================================
   Widget _buildOrderButton() {
-    String serviceName =
-        _selectedService == 'gosend' ? 'GoSend' : 'Grab Express';
+    String serviceName;
+
+    // Penentuan Label Dinamis Tombol Bawah
+    if (_selectedService == 'gosend') {
+      serviceName = 'GoSend';
+    } else if (_selectedService == 'grab_express') {
+      serviceName = 'Grab Express';
+    } else {
+      serviceName = 'COD (Ketemuan)';
+    }
 
     return SizedBox(
       width: double.infinity,
@@ -1240,14 +1295,9 @@ class _CheckoutPageState extends State<CheckoutPage>
                   color: Colors.white,
                 ),
               )
-            : const Icon(
-                Icons.shopping_cart_checkout,
-                color: Colors.white,
-              ),
+            : const Icon(Icons.shopping_cart_checkout, color: Colors.white),
         label: Text(
-          _isPlacingOrder
-              ? 'Memproses Pesanan...'
-              : 'Pesan via $serviceName',
+          _isPlacingOrder ? 'Memproses Pesanan...' : 'Pesan via $serviceName',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -1256,7 +1306,9 @@ class _CheckoutPageState extends State<CheckoutPage>
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF1A2235),
-          disabledBackgroundColor: const Color(0xFF1A2235).withValues(alpha: 0.6),
+          disabledBackgroundColor: const Color(
+            0xFF1A2235,
+          ).withValues(alpha: 0.6),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),

@@ -22,13 +22,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     _currentStatus = widget.orderData['status'] ?? 'Processing';
   }
 
-  // FUNGSI UPDATE STATUS PESANAN MURNI FIREBASE
   void _updateStatus(String newStatus) async {
     setState(() => _isLoading = true);
     final String orderId = widget.orderData['id'] ?? '';
 
     try {
-      // Update status pesanan (Bisa diselesaikan pembeli / dibatalkan) di server Firebase
       await _dbService.updateOrderStatus(orderId, newStatus);
       setState(() {
         _currentStatus = newStatus;
@@ -65,6 +63,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     final item = widget.orderData;
+    final String deliveryService = item['deliveryService'] ?? '';
 
     Color statusBgColor;
     Color statusTextColor;
@@ -317,9 +316,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3b. DELIVERY INFO CARD (if available)
-                  if (item['deliveryService'] != null &&
-                      (item['deliveryService'] as String).isNotEmpty) ...[
+                  // 3b. DELIVERY INFO CARD
+                  if (deliveryService.isNotEmpty) ...[
                     const Text(
                       'Delivery Info',
                       style: TextStyle(
@@ -346,22 +344,33 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Jasa Pengiriman
+                          // Jasa Pengiriman Box Logo
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE8F5E9),
+                              color: deliveryService.contains('COD')
+                                  ? const Color(
+                                      0xFFE8F5E9,
+                                    ) // Hijau pucat premium untuk COD Kampus
+                                  : const Color(0xFFE8F5E9),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
                                 Icon(
-                                  item['deliveryService'] == 'GoSend'
+                                  deliveryService == 'GoSend'
                                       ? Icons.two_wheeler
-                                      : Icons.delivery_dining,
-                                  color: item['deliveryService'] == 'GoSend'
+                                      : (deliveryService == 'Grab Express'
+                                            ? Icons.delivery_dining
+                                            : Icons
+                                                  .people_outline), // Ikon ganti ke user profile jika COD
+                                  color: deliveryService == 'GoSend'
                                       ? const Color(0xFF00880F)
-                                      : const Color(0xFF00B14F),
+                                      : (deliveryService == 'Grab Express'
+                                            ? const Color(0xFF00B14F)
+                                            : const Color(
+                                                0xFF00B359,
+                                              )), // Warna hijau Jade sirkular milik tim kalian
                                   size: 24,
                                 ),
                                 const SizedBox(width: 12),
@@ -371,20 +380,31 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        item['deliveryService'] ?? '',
+                                        deliveryService,
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
-                                          color: item['deliveryService'] ==
-                                                  'GoSend'
+                                          color: deliveryService == 'GoSend'
                                               ? const Color(0xFF00880F)
-                                              : const Color(0xFF00B14F),
+                                              : (deliveryService ==
+                                                        'Grab Express'
+                                                    ? const Color(0xFF00B14F)
+                                                    : const Color(0xFF00B359)),
                                         ),
                                       ),
-                                      if (item['distanceKm'] != null)
+                                      if (item['distanceKm'] != null &&
+                                          !deliveryService.contains('COD'))
                                         Text(
                                           'Jarak: ${(item['distanceKm'] as num).toStringAsFixed(1)} km',
                                           style: const TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      if (deliveryService.contains('COD'))
+                                        const Text(
+                                          'Metode: Tatap Muka Langsung',
+                                          style: TextStyle(
                                             color: Colors.grey,
                                             fontSize: 12,
                                           ),
@@ -394,9 +414,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 ),
                                 if (item['deliveryFee'] != null)
                                   Text(
-                                    DeliveryService.formatRupiah(
-                                      (item['deliveryFee'] as num).toDouble(),
-                                    ),
+                                    deliveryService.contains('COD')
+                                        ? 'Gratis'
+                                        : DeliveryService.formatRupiah(
+                                            (item['deliveryFee'] as num)
+                                                .toDouble(),
+                                          ),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
@@ -406,7 +429,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                               ],
                             ),
                           ),
-                          // Alamat Pengiriman
+                          // Alamat Pengiriman / Status Lokasi COD
                           if (item['buyerAddress'] != null &&
                               (item['buyerAddress'] as String).isNotEmpty) ...[
                             const SizedBox(height: 12),
@@ -418,12 +441,19 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                               ),
                               child: Row(
                                 children: [
-                                  const CircleAvatar(
-                                    backgroundColor: Color(0xFFE3F2FD),
+                                  CircleAvatar(
+                                    backgroundColor:
+                                        deliveryService.contains('COD')
+                                        ? const Color(0xFFE8F5E9)
+                                        : const Color(0xFFE3F2FD),
                                     radius: 18,
                                     child: Icon(
-                                      Icons.home,
-                                      color: Color(0xFF1565C0),
+                                      deliveryService.contains('COD')
+                                          ? Icons.handshake_outlined
+                                          : Icons.home,
+                                      color: deliveryService.contains('COD')
+                                          ? const Color(0xFF00B359)
+                                          : const Color(0xFF1565C0),
                                       size: 18,
                                     ),
                                   ),
@@ -433,9 +463,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
-                                          'Alamat Pengiriman',
-                                          style: TextStyle(
+                                        Text(
+                                          deliveryService.contains('COD')
+                                              ? 'Lokasi Serah Terima'
+                                              : 'Alamat Pengiriman',
+                                          style: const TextStyle(
                                             fontSize: 11,
                                             color: Colors.grey,
                                             fontWeight: FontWeight.w600,
@@ -459,51 +491,57 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 14),
-                          // Tombol buka app Gojek/Grab
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                if (item['deliveryService'] == 'GoSend') {
-                                  DeliveryService.openGojekApp();
-                                } else {
-                                  DeliveryService.openGrabApp();
-                                }
-                              },
-                              icon: Icon(
-                                item['deliveryService'] == 'GoSend'
-                                    ? Icons.two_wheeler
-                                    : Icons.delivery_dining,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              label: Text(
-                                'Buka ${item['deliveryService'] == 'GoSend' ? 'Gojek' : 'Grab'}',
-                                style: const TextStyle(
+
+                          // ====================================================================
+                          // FIX LOGIKA: TOMBOL AKSI OJEK ONLINE HANYA MUNCUL JIKA BUKAN TRANSAKSI COD
+                          // ====================================================================
+                          if (deliveryService == 'GoSend' ||
+                              deliveryService == 'Grab Express') ...[
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  if (deliveryService == 'GoSend') {
+                                    DeliveryService.openGojekApp();
+                                  } else {
+                                    DeliveryService.openGrabApp();
+                                  }
+                                },
+                                icon: Icon(
+                                  deliveryService == 'GoSend'
+                                      ? Icons.two_wheeler
+                                      : Icons.delivery_dining,
                                   color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  size: 20,
                                 ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    item['deliveryService'] == 'GoSend'
-                                        ? const Color(0xFF00880F)
-                                        : const Color(0xFF00B14F),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                label: Text(
+                                  'Buka ${deliveryService == 'GoSend' ? 'Gojek' : 'Grab'}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: deliveryService == 'GoSend'
+                                      ? const Color(0xFF00880F)
+                                      : const Color(0xFF00B14F),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
+                          // ====================================================================
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
                   ],
+                  const SizedBox(height: 16),
 
                   // 4. ACTION BUTTONS BAR (Tombol Selesai & Batal Pesanan)
                   if (_currentStatus == 'Processing')
