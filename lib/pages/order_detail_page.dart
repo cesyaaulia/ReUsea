@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/services/delivery_service.dart';
+import 'package:reusea/utils/theme.dart';
+import 'package:reusea/widgets/rating_modal.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final Map<String, dynamic> orderData;
@@ -13,6 +17,7 @@ class OrderDetailPage extends StatefulWidget {
 
 class _OrderDetailPageState extends State<OrderDetailPage> {
   final DatabaseService _dbService = DatabaseService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
   late String _currentStatus;
 
@@ -41,8 +46,22 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           ),
         );
       }
-      if (mounted) {
-        Navigator.pop(context);
+
+      if (newStatus == 'Completed') {
+        setState(() => _isLoading = false);
+        final currentUser = _auth.currentUser;
+        final String buyerId = widget.orderData['buyerId'] ?? '';
+        if (currentUser != null && currentUser.uid == buyerId) {
+          // Otomatis luncurkan modal rating & ulasan
+          await RatingModal.show(context, widget.orderData);
+        }
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } else {
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -54,7 +73,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && newStatus != 'Completed') {
         setState(() => _isLoading = false);
       }
     }
@@ -62,551 +81,589 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.orderData;
-    final String deliveryService = item['deliveryService'] ?? '';
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .doc(widget.orderData['id'])
+          .snapshots(),
+      builder: (context, snapshot) {
+        Map<String, dynamic> item = widget.orderData;
+        if (snapshot.hasData && snapshot.data!.exists) {
+          item = snapshot.data!.data() as Map<String, dynamic>;
+          item['id'] = snapshot.data!.id;
+          _currentStatus = item['status'] ?? _currentStatus;
+        }
 
-    Color statusBgColor;
-    Color statusTextColor;
-    switch (_currentStatus) {
-      case 'Completed':
-        statusBgColor = const Color(0xFFE8F5E9);
-        statusTextColor = const Color(0xFF2E7D32);
-        break;
-      case 'Cancelled':
-        statusBgColor = const Color(0xFFFFEBEE);
-        statusTextColor = const Color(0xFFC62828);
-        break;
-      case 'Processing':
-      default:
-        statusBgColor = const Color(0xFFE3F2FD);
-        statusTextColor = const Color(0xFF1565C0);
-        break;
-    }
+        final String deliveryService = item['deliveryService'] ?? '';
+        final String currentUserId = _auth.currentUser?.uid ?? '';
+        final String buyerId = item['buyerId'] ?? '';
+        final bool isBuyer = currentUserId == buyerId;
+        final bool isReviewed = item['isReviewed'] ?? false;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F1EE),
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.black,
-            size: 20,
+        Color statusBgColor;
+        Color statusTextColor;
+        switch (_currentStatus) {
+          case 'Completed':
+            statusBgColor = const Color(0xFFE8F5E9);
+            statusTextColor = const Color(0xFF2E7D32);
+            break;
+          case 'Cancelled':
+            statusBgColor = const Color(0xFFFFEBEE);
+            statusTextColor = const Color(0xFFC62828);
+            break;
+          case 'Processing':
+          default:
+            statusBgColor = const Color(0xFFE3F2FD);
+            statusTextColor = const Color(0xFF1565C0);
+            break;
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF2F1EE),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFFF2F1EE),
+            elevation: 0,
+            centerTitle: true,
+            leading: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.black,
+                size: 20,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: const Text(
+              'Order Detail',
+              style: TextStyle(
+                color: Color(0xFF1E293B),
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(
+                color: Colors.grey.withValues(alpha: 0.1),
+                height: 1,
+              ),
+            ),
           ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Order Detail',
-          style: TextStyle(
-            color: Color(0xFF1E293B),
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: Colors.grey.withValues(alpha: 0.1),
-            height: 1,
-          ),
-        ),
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF1A2235)),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. STATUS CARD
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
+          body: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF1A2235)),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. STATUS CARD
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'STATUS',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            letterSpacing: 1.1,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusBgColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _currentStatus,
-                            style: TextStyle(
-                              color: statusTextColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2. MAIN DETAILS CARD
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          height: 320,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF2F1EE),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: Center(
-                            child:
-                                item['imagePath'] != null &&
-                                    item['imagePath'].startsWith('http')
-                                ? Image.network(
-                                    item['imagePath'],
-                                    fit: BoxFit.contain,
-                                  )
-                                : const Icon(
-                                    Icons.shopping_bag_outlined,
-                                    color: Color(0xFF1A2235),
-                                    size: 100,
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          item['name'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Seller: ${item['sellerName'] ?? 'Mahasiswa UNESA'}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          item['price'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            color: Color(0xFF1A2235),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 3. PICKUP LOCATION CARD
-                  const Text(
-                    'Pickup Location',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF2F1EE),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const CircleAvatar(
-                            backgroundColor: Color(0xFFE2E8F0),
-                            child: Icon(
-                              Icons.location_on,
-                              color: Color(0xFF1A2235),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'STATUS',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                letterSpacing: 1.1,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['location'] ?? 'UNESA Lidah Wetan',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                const Text(
-                                  'Surabaya, East Java',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 3b. DELIVERY INFO CARD
-                  if (deliveryService.isNotEmpty) ...[
-                    const Text(
-                      'Delivery Info',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Jasa Pengiriman Box Logo
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: deliveryService.contains('COD')
-                                  ? const Color(
-                                      0xFFE8F5E9,
-                                    ) // Hijau pucat premium untuk COD Kampus
-                                  : const Color(0xFFE8F5E9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  deliveryService == 'GoSend'
-                                      ? Icons.two_wheeler
-                                      : (deliveryService == 'Grab Express'
-                                            ? Icons.delivery_dining
-                                            : Icons
-                                                  .people_outline), // Ikon ganti ke user profile jika COD
-                                  color: deliveryService == 'GoSend'
-                                      ? const Color(0xFF00880F)
-                                      : (deliveryService == 'Grab Express'
-                                            ? const Color(0xFF00B14F)
-                                            : const Color(
-                                                0xFF00B359,
-                                              )), // Warna hijau Jade sirkular milik tim kalian
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        deliveryService,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: deliveryService == 'GoSend'
-                                              ? const Color(0xFF00880F)
-                                              : (deliveryService ==
-                                                        'Grab Express'
-                                                    ? const Color(0xFF00B14F)
-                                                    : const Color(0xFF00B359)),
-                                        ),
-                                      ),
-                                      if (item['distanceKm'] != null &&
-                                          !deliveryService.contains('COD'))
-                                        Text(
-                                          'Jarak: ${(item['distanceKm'] as num).toStringAsFixed(1)} km',
-                                          style: const TextStyle(
-                                            color: Colors.grey,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      if (deliveryService.contains('COD'))
-                                        const Text(
-                                          'Metode: Tatap Muka Langsung',
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                if (item['deliveryFee'] != null)
-                                  Text(
-                                    deliveryService.contains('COD')
-                                        ? 'Gratis'
-                                        : DeliveryService.formatRupiah(
-                                            (item['deliveryFee'] as num)
-                                                .toDouble(),
-                                          ),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          // Alamat Pengiriman / Status Lokasi COD
-                          if (item['buyerAddress'] != null &&
-                              (item['buyerAddress'] as String).isNotEmpty) ...[
-                            const SizedBox(height: 12),
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusBgColor,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _currentStatus,
+                                style: TextStyle(
+                                  color: statusTextColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 2. MAIN DETAILS CARD
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              height: 320,
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF2F1EE),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor:
-                                        deliveryService.contains('COD')
-                                        ? const Color(0xFFE8F5E9)
-                                        : const Color(0xFFE3F2FD),
-                                    radius: 18,
-                                    child: Icon(
-                                      deliveryService.contains('COD')
-                                          ? Icons.handshake_outlined
-                                          : Icons.home,
-                                      color: deliveryService.contains('COD')
-                                          ? const Color(0xFF00B359)
-                                          : const Color(0xFF1565C0),
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          deliveryService.contains('COD')
-                                              ? 'Lokasi Serah Terima'
-                                              : 'Alamat Pengiriman',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          item['buyerAddress'],
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 13,
-                                            color: Color(0xFF1E293B),
-                                          ),
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                              padding: const EdgeInsets.all(16),
+                              child: Center(
+                                child:
+                                    item['imagePath'] != null &&
+                                        item['imagePath'].startsWith('http')
+                                    ? Image.network(
+                                        item['imagePath'],
+                                        fit: BoxFit.contain,
+                                      )
+                                    : const Icon(
+                                        Icons.shopping_bag_outlined,
+                                        color: Color(0xFF1A2235),
+                                        size: 100,
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              item['name'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Seller: ${item['sellerName'] ?? 'Mahasiswa UNESA'}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              item['price'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                color: Color(0xFF1A2235),
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
-
-                          // ====================================================================
-                          // FIX LOGIKA: TOMBOL AKSI OJEK ONLINE HANYA MUNCUL JIKA BUKAN TRANSAKSI COD
-                          // ====================================================================
-                          if (deliveryService == 'GoSend' ||
-                              deliveryService == 'Grab Express') ...[
-                            const SizedBox(height: 14),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  if (deliveryService == 'GoSend') {
-                                    DeliveryService.openGojekApp();
-                                  } else {
-                                    DeliveryService.openGrabApp();
-                                  }
-                                },
-                                icon: Icon(
-                                  deliveryService == 'GoSend'
-                                      ? Icons.two_wheeler
-                                      : Icons.delivery_dining,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                label: Text(
-                                  'Buka ${deliveryService == 'GoSend' ? 'Gojek' : 'Grab'}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: deliveryService == 'GoSend'
-                                      ? const Color(0xFF00880F)
-                                      : const Color(0xFF00B14F),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                          // ====================================================================
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // 4. ACTION BUTTONS BAR (Tombol Selesai & Batal Pesanan)
-                  if (_currentStatus == 'Processing')
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 55,
-                            child: ElevatedButton.icon(
-                              onPressed: () => _updateStatus('Cancelled'),
-                              icon: const Icon(
-                                Icons.cancel_outlined,
-                                color: Colors.white,
-                              ),
-                              label: const Text(
-                                'Cancel Order',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFC62828),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
+                      // 3. PICKUP LOCATION CARD
+                      const Text(
+                        'Pickup Location',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
+                          ],
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF2F1EE),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                backgroundColor: Color(0xFFE2E8F0),
+                                child: Icon(
+                                  Icons.location_on,
+                                  color: Color(0xFF1A2235),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['location'] ?? 'UNESA Lidah Wetan',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Surabaya, East Java',
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SizedBox(
-                            height: 55,
-                            child: ElevatedButton.icon(
-                              onPressed: () => _updateStatus('Completed'),
-                              icon: const Icon(
-                                Icons.check_circle_outline,
-                                color: Colors.white,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 3b. DELIVERY INFO CARD
+                      if (deliveryService.isNotEmpty) ...[
+                        const Text(
+                          'Delivery Info',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
-                              label: const Text(
-                                'Complete Order',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E7D32),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Jasa Pengiriman Box Logo
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: deliveryService.contains('COD')
+                                      ? const Color(0xFFE8F5E9)
+                                      : const Color(0xFFE8F5E9),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      deliveryService == 'GoSend'
+                                          ? Icons.two_wheeler
+                                          : (deliveryService == 'Grab Express'
+                                                ? Icons.delivery_dining
+                                                : Icons.people_outline),
+                                      color: deliveryService == 'GoSend'
+                                          ? const Color(0xFF00880F)
+                                          : (deliveryService == 'Grab Express'
+                                                ? const Color(0xFF00B14F)
+                                                : const Color(0xFF00B359)),
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            deliveryService,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: deliveryService == 'GoSend'
+                                                  ? const Color(0xFF00880F)
+                                                  : (deliveryService ==
+                                                            'Grab Express'
+                                                        ? const Color(0xFF00B14F)
+                                                        : const Color(0xFF00B359)),
+                                            ),
+                                          ),
+                                          if (item['distanceKm'] != null &&
+                                              !deliveryService.contains('COD'))
+                                            Text(
+                                              'Jarak: ${(item['distanceKm'] as num).toStringAsFixed(1)} km',
+                                              style: const TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          if (deliveryService.contains('COD'))
+                                            const Text(
+                                              'Metode: Tatap Muka Langsung',
+                                              style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (item['deliveryFee'] != null)
+                                      Text(
+                                        deliveryService.contains('COD')
+                                            ? 'Gratis'
+                                            : DeliveryService.formatRupiah(
+                                                (item['deliveryFee'] as num)
+                                                    .toDouble(),
+                                              ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
+                              // Alamat Pengiriman / Status Lokasi COD
+                              if (item['buyerAddress'] != null &&
+                                  (item['buyerAddress'] as String).isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF2F1EE),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor:
+                                            deliveryService.contains('COD')
+                                            ? const Color(0xFFE8F5E9)
+                                            : const Color(0xFFE3F2FD),
+                                        radius: 18,
+                                        child: Icon(
+                                          deliveryService.contains('COD')
+                                              ? Icons.handshake_outlined
+                                              : Icons.home,
+                                          color: deliveryService.contains('COD')
+                                              ? const Color(0xFF00B359)
+                                              : const Color(0xFF1565C0),
+                                          size: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              deliveryService.contains('COD')
+                                                  ? 'Lokasi Serah Terima'
+                                                  : 'Alamat Pengiriman',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              item['buyerAddress'],
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 13,
+                                                color: Color(0xFF1E293B),
+                                              ),
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+
+                              if (deliveryService == 'GoSend' ||
+                                  deliveryService == 'Grab Express') ...[
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      if (deliveryService == 'GoSend') {
+                                        DeliveryService.openGojekApp();
+                                      } else {
+                                        DeliveryService.openGrabApp();
+                                      }
+                                    },
+                                    icon: Icon(
+                                      deliveryService == 'GoSend'
+                                          ? Icons.two_wheeler
+                                          : Icons.delivery_dining,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    label: Text(
+                                      'Buka ${deliveryService == 'GoSend' ? 'Gojek' : 'Grab'}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: deliveryService == 'GoSend'
+                                          ? const Color(0xFF00880F)
+                                          : const Color(0xFF00B14F),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ],
-                    ),
-                ],
-              ),
-            ),
+                      const SizedBox(height: 16),
+
+                      // 4. ACTION BUTTONS BAR (Tombol Selesai & Batal Pesanan atau Beri Ulasan)
+                      if (_currentStatus == 'Processing')
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 55,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _updateStatus('Cancelled'),
+                                  icon: const Icon(
+                                    Icons.cancel_outlined,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Cancel Order',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFC62828),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SizedBox(
+                                height: 55,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _updateStatus('Completed'),
+                                  icon: const Icon(
+                                    Icons.check_circle_outline,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Complete Order',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2E7D32),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (_currentStatus == 'Completed' && isBuyer && !isReviewed)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              await RatingModal.show(context, item);
+                            },
+                            icon: const Icon(
+                              Icons.star_rate_rounded,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Beri Ulasan Penjual',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.sunsetOrange,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+        );
+      },
     );
   }
 }

@@ -23,6 +23,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Uint8List? _imageBytes; // Menampung data foto baru dalam bentuk byte
   bool _isLoading = false;
 
+  late TextEditingController _facultyController;
+
   @override
   void initState() {
     super.initState();
@@ -34,12 +36,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     _nameController = TextEditingController(text: currentName);
     _emailController = TextEditingController(text: currentEmail);
+    _facultyController = TextEditingController();
+
+    if (user != null) {
+      _firestore.collection('users').doc(user.uid).get().then((doc) {
+        if (doc.exists && mounted) {
+          var data = doc.data() as Map<String, dynamic>;
+          setState(() {
+            _facultyController.text = data['faculty'] ?? '';
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _facultyController.dispose();
     super.dispose();
   }
 
@@ -107,6 +122,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'name': _nameController.text.trim(),
           'photoUrl': downloadUrl,
           'email': user.email,
+          'faculty': _facultyController.text.trim(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
@@ -228,6 +244,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFFEEEEEE)),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF1A2235)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 25),
+
+              // Faculty / Jurusan TextField
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'FAKULTAS / JURUSAN',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _facultyController,
+                    decoration: const InputDecoration(
+                      hintText: "Contoh: Fakultas Teknik / S1 Informatika",
                       enabledBorder: UnderlineInputBorder(
                         borderSide: BorderSide(color: Color(0xFFEEEEEE)),
                       ),

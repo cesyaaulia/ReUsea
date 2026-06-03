@@ -8,6 +8,7 @@ import 'package:reusea/utils/theme.dart';
 import '../models/product_model.dart';
 import 'chat_detail_page.dart';
 import 'checkout_page.dart';
+import 'seller_profile_page.dart';
 
 class DetailPage extends StatefulWidget {
   final Product product;
@@ -431,56 +432,181 @@ class _DetailPageState extends State<DetailPage> {
                             var userData = snapshot.data?.data() as Map<String, dynamic>?;
                             String sName = userData?['name'] ?? widget.product.sellerName;
                             String sPhoto = userData?['photoUrl'] ?? widget.product.sellerPhoto;
+                            int solds = userData?['solds'] ?? 0;
+                            double averageRating = (userData?['averageRating'] ?? 0.0).toDouble();
+                            int reviewsCount = userData?['reviewsCount'] ?? 0;
+
+                            // Badge reputasi penjual
+                            Widget badgeWidget = const SizedBox.shrink();
+                            LinearGradient badgeGradient = const LinearGradient(colors: [Colors.grey, Colors.grey]);
+                            String badgeText = '';
+
+                            if (reviewsCount > 0) {
+                              if (averageRating >= 4.8) {
+                                badgeText = "🏆 Penjual Terpercaya";
+                                badgeGradient = const LinearGradient(
+                                  colors: [Color(0xFFFECA57), Color(0xFFFF9F43)], // Gold Gradient
+                                );
+                              } else if (averageRating >= 4.0) {
+                                badgeText = "✅ Penjual Andal";
+                                badgeGradient = const LinearGradient(
+                                  colors: [Color(0xFF54A0FF), Color(0xFF2E86DE)], // Blue Gradient
+                                );
+                              } else if (averageRating >= 3.0) {
+                                badgeText = "⚠️ Penjual Biasa";
+                                badgeGradient = const LinearGradient(
+                                  colors: [Color(0xFFFF9F43), Color(0xFFEE5253)], // Orange Gradient
+                                );
+                              } else {
+                                badgeText = "🚨 Rating Rendah";
+                                badgeGradient = const LinearGradient(
+                                  colors: [Color(0xFFEE5253), Color(0xFFD32F2F)], // Red Gradient
+                                );
+                              }
+
+                              badgeWidget = Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  gradient: badgeGradient,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              badgeWidget = Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text(
+                                  "🆕 Penjual Baru",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            }
 
                             return Container(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
                                   color: AppTheme.primaryBlue.withValues(alpha: 0.05),
                                   width: 1.5,
                                 ),
-                                boxShadow: AppTheme.softShadow(),
+                                boxShadow: AppTheme.softShadow(color: AppTheme.primaryBlue),
                               ),
-                              child: Row(
+                              child: Column(
                                 children: [
-                                  CircleAvatar(
-                                    radius: 24,
-                                    backgroundColor: AppTheme.bgLight,
-                                    backgroundImage: sPhoto.isNotEmpty ? NetworkImage(sPhoto) : null,
-                                    child: sPhoto.isEmpty ? const Icon(Icons.person_rounded, color: AppTheme.secondaryBlue) : null,
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          sName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
-                                            color: AppTheme.darkNavy,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Row(
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 28,
+                                        backgroundColor: AppTheme.bgLight,
+                                        backgroundImage: sPhoto.isNotEmpty ? NetworkImage(sPhoto) : null,
+                                        child: sPhoto.isEmpty ? const Icon(Icons.person_rounded, color: AppTheme.secondaryBlue) : null,
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            const Icon(Icons.verified_rounded, color: AppTheme.ecoTeal, size: 14),
-                                            const SizedBox(width: 4),
                                             Text(
-                                              "Verified UNESA Student",
-                                              style: TextStyle(
-                                                color: AppTheme.ecoTeal,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
+                                              sName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 16,
+                                                color: AppTheme.darkNavy,
                                               ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  averageRating > 0 ? Icons.star_rounded : Icons.star_outline_rounded,
+                                                  color: AppTheme.sunYellow,
+                                                  size: 16,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  averageRating > 0 
+                                                      ? "${averageRating.toStringAsFixed(1)} ($reviewsCount Ulasan)"
+                                                      : "Belum ada ulasan",
+                                                  style: const TextStyle(
+                                                    color: AppTheme.secondaryBlue,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "$solds Barang Terjual",
+                                            style: TextStyle(
+                                              color: AppTheme.secondaryBlue.withValues(alpha: 0.8),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          badgeWidget,
+                                        ],
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            SlideFadeRightRoute(
+                                              page: SellerProfilePage(
+                                                sellerId: widget.product.sellerId,
+                                                fallbackName: widget.product.sellerName,
+                                                fallbackPhoto: widget.product.sellerPhoto,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.06),
+                                          foregroundColor: AppTheme.primaryBlue,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          "Lihat Profil Penjual",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

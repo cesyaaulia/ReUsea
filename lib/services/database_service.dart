@@ -666,4 +666,89 @@ class DatabaseService {
       await docRef.set(product);
     }
   }
+
+  // ====================================================================
+  // 6. MANAJEMEN RATING & ULASAN PENJUAL (SELLER REVIEW LOGIC)
+  // ====================================================================
+
+  /// Membuat ulasan penjual secara aman menggunakan Firestore Transactions
+  Future<void> submitSellerReview({
+    required String orderId,
+    required String sellerId,
+    required String buyerId,
+    required String buyerName,
+    required String buyerPhoto,
+    required double rating,
+    required String comment,
+  }) async {
+    final DocumentReference reviewRef = _db.collection('reviews').doc();
+    final DocumentReference orderRef = _db.collection('orders').doc(orderId);
+    final DocumentReference sellerRef = _db.collection('users').doc(sellerId);
+
+    await _db.runTransaction((transaction) async {
+      // 1. Ambil data reputasi penjual saat ini
+      DocumentSnapshot sellerSnap = await transaction.get(sellerRef);
+      double oldRatingSum = 0;
+      int oldReviewsCount = 0;
+
+      if (sellerSnap.exists) {
+        var data = sellerSnap.data() as Map<String, dynamic>;
+        oldRatingSum = (data['ratingSum'] ?? 0.0).toDouble();
+        oldReviewsCount = (data['reviewsCount'] ?? 0).toInt();
+      }
+
+      // Hitung agregasi baru
+      double newRatingSum = oldRatingSum + rating;
+      int newReviewsCount = oldReviewsCount + 1;
+      double newAverageRating = newRatingSum / newReviewsCount;
+
+      // 2. Tulis dokumen ulasan baru
+      transaction.set(reviewRef, {
+        'id': reviewRef.id,
+        'type': 'seller',
+        'targetId': sellerId,
+        'reviewerId': buyerId,
+        'reviewerName': buyerName,
+        'reviewerPhoto': buyerPhoto,
+        'rating': rating,
+        'comment': comment,
+        'orderId': orderId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'likesCount': 0,
+        'repliesCount': 0,
+        'reportsCount': 0,
+        'isReported': false,
+      });
+
+      // 3. Tandai pesanan sebagai sudah diberi ulasan (isReviewed = true)
+      transaction.update(orderRef, {
+        'isReviewed': true,
+        'reviewedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 4. Update data profil penjual dengan rating baru
+      transaction.set(sellerRef, {
+        'ratingSum': newRatingSum,
+        'reviewsCount': newReviewsCount,
+        'averageRating': newAverageRating,
+      }, SetOptions(merge: true));
+    });
+
+    // Buat notifikasi ke penjual bahwa ada ulasan baru masuk
+    await createNotification(
+      receiverId: sellerId,
+      title: 'Ulasan Baru Diterima! ⭐',
+      message: '$buyerName memberikan rating ${rating.toStringAsFixed(1)} bintang untuk transaksi Anda.',
+    );
+  }
+
+  /// Mendapatkan stream ulasan penjual (diurutkan in-memory di sisi widget)
+  Stream<QuerySnapshot> getSellerReviewsStream(String sellerId) {
+    return _db
+        .collection('reviews')
+        .where('targetId', isEqualTo: sellerId)
+        .where('type', isEqualTo: 'seller')
+        .snapshots();
+  }
 }
+
