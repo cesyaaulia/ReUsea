@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/services/database_service.dart';
+import 'package:reusea/utils/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import '../models/product_model.dart';
@@ -48,10 +49,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _currentUserId = user?.uid ?? '';
     _currentUserName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Pembeli';
 
-    // Inisialisasi suggestion chips secara dinamis berdasarkan peran (Buyer/Seller)
     if (widget.product != null) {
       if (widget.product!.sellerId == _currentUserId) {
-        // Current user adalah SELLER
         _suggestions = [
           "Barang masih tersedia ya kak",
           "Kondisi masih bagus kak",
@@ -62,7 +61,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           "Sudah tidak ada minus lain kak, siap pakai",
         ];
       } else {
-        // Current user adalah BUYER
         _suggestions = [
           "Barangnya masih ada nggak kak?",
           "Kondisi barangnya gimana kak?",
@@ -77,7 +75,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       _suggestions = List<String>.from(widget.initialSuggestions!);
     }
 
-    // Reset unread count ketika membuka chat
     _dbService.resetUnreadCount(roomId: widget.roomId, userId: _currentUserId);
   }
 
@@ -93,7 +90,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     
     _messageController.clear();
     
-    // Kirim pesan ke Firestore
     await _dbService.sendMessage(
       roomId: widget.roomId,
       senderId: _currentUserId,
@@ -101,7 +97,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       text: text,
     );
 
-    // Reset unread count lagi untuk keamanan
     _dbService.resetUnreadCount(roomId: widget.roomId, userId: _currentUserId);
   }
 
@@ -138,7 +133,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Gagal mengirim gambar: $e"),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppTheme.coralPeach,
           ),
         );
       }
@@ -183,7 +178,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Gagal mengirim video: $e"),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppTheme.coralPeach,
           ),
         );
       }
@@ -222,21 +217,25 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
+      backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A2235),
+        backgroundColor: Colors.white,
         elevation: 0,
-        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.darkNavy),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Row(
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              backgroundColor: AppTheme.bgLight,
               backgroundImage: widget.peerPhoto.isNotEmpty && widget.peerPhoto.startsWith('http')
                   ? NetworkImage(widget.peerPhoto)
                   : null,
               child: widget.peerPhoto.isEmpty || !widget.peerPhoto.startsWith('http')
-                  ? const Icon(Icons.person, size: 20, color: Colors.white)
+                  ? const Icon(Icons.person_rounded, size: 20, color: AppTheme.secondaryBlue)
                   : null,
             ),
             const SizedBox(width: 12),
@@ -244,10 +243,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               child: Text(
                 widget.peerName,
                 style: const TextStyle(
-                  fontFamily: 'Lexend',
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: Colors.white,
+                  color: AppTheme.darkNavy,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -260,22 +258,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           Center(
             child: Container(
               constraints: const BoxConstraints(maxWidth: 800),
-              color: const Color(0xFFF2F1EE),
               child: Column(
                 children: [
-                  // STICKY PRODUCT PREVIEW (Shopee Style)
                   if (widget.product != null && _showProductCard) _buildProductHeaderCard(),
 
-                  // STREAM DATA PESANAN CHAT
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
                       stream: _dbService.getMessagesStream(widget.roomId),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF1A2235),
-                            ),
+                            child: CircularProgressIndicator(color: AppTheme.primaryBlue),
                           );
                         }
 
@@ -285,18 +278,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.chat_bubble_outline,
+                                  Icons.chat_bubble_outline_rounded,
                                   size: 64,
-                                  color: Colors.grey.withValues(alpha: 0.5),
+                                  color: AppTheme.secondaryBlue.withValues(alpha: 0.3),
                                 ),
                                 const SizedBox(height: 16),
-                                Text(
+                                const Text(
                                   "Belum ada percakapan\nMulai obrolan sekarang!",
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontFamily: 'Lexend',
-                                    color: Colors.grey[500],
+                                    color: AppTheme.secondaryBlue,
                                     fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
@@ -309,7 +302,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         return ListView.builder(
                           controller: _scrollController,
                           reverse: true,
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           itemCount: docs.length,
                           itemBuilder: (context, index) {
                             final data = docs[index].data() as Map<String, dynamic>;
@@ -321,10 +314,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     ),
                   ),
 
-                  // QUICK CHIPS ROW (Shopee Style)
                   if (_suggestions.isNotEmpty) _buildSuggestionChips(),
-
-                  // BOTTOM CHAT INPUT FIELD
                   _buildMessageInputField(),
                 ],
               ),
@@ -341,16 +331,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(
-                          color: Color(0xFF1A2235),
-                        ),
+                        CircularProgressIndicator(color: AppTheme.primaryBlue),
                         SizedBox(height: 16),
                         Text(
                           "Mengunggah media...",
-                          style: TextStyle(
-                            fontFamily: 'Lexend',
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -363,7 +348,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
-  // WIDGET KARTU PRODUK STICKY DI ATAS CHAT
   Widget _buildProductHeaderCard() {
     final prod = widget.product!;
     final imageToShow = prod.imageUrls.isNotEmpty ? prod.imageUrls.first : prod.imagePath;
@@ -373,53 +357,23 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: Colors.grey.withValues(alpha: 0.15),
-        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppTheme.softShadow(),
+        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
-          // Gambar Produk
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
               width: 55,
               height: 55,
               child: imageToShow.startsWith('http')
-                  ? Image.network(
-                      imageToShow,
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => Container(
-                        color: const Color(0xFFF2F1EE),
-                        child: const Icon(Icons.broken_image, size: 24, color: Colors.grey),
-                      ),
-                    )
-                  : Image.asset(
-                      'assets/images/profile_placeholder.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => Container(
-                        color: const Color(0xFFF2F1EE),
-                        child: const Center(
-                          child: Icon(
-                            Icons.person_outline,
-                            color: Colors.grey,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ),
+                  ? Image.network(imageToShow, fit: BoxFit.cover)
+                  : Image.asset('assets/images/profile_placeholder.png', fit: BoxFit.cover),
             ),
           ),
           const SizedBox(width: 12),
-          // Info Teks
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,20 +383,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontFamily: 'Lexend',
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    color: Colors.black87,
+                    color: AppTheme.darkNavy,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   prod.price,
                   style: const TextStyle(
-                    fontFamily: 'Lexend',
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.bold,
                     fontSize: 13,
-                    color: Color(0xFFBC8E52),
+                    color: AppTheme.primaryBlue,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -450,26 +402,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: prod.condition == 'Baru'
-                        ? const Color(0xFFE8F5E9)
-                        : const Color(0xFFFFF3E0),
+                        ? AppTheme.ecoTeal.withValues(alpha: 0.1)
+                        : AppTheme.sunsetOrange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     prod.condition,
                     style: TextStyle(
-                      fontFamily: 'Lexend',
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
-                      color: prod.condition == 'Baru'
-                          ? const Color(0xFF2E7D32)
-                          : const Color(0xFFE65100),
+                      color: prod.condition == 'Baru' ? AppTheme.ecoTeal : AppTheme.sunsetOrange,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          // Aksi Kirim Tautan & Tutup
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -481,7 +429,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     _showProductCard = false;
                   });
                 },
-                icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                icon: const Icon(Icons.close_rounded, size: 18, color: AppTheme.secondaryBlue),
               ),
               const SizedBox(height: 8),
               ElevatedButton(
@@ -492,18 +440,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   });
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A2235),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: const Text(
                   "Kirim Link",
                   style: TextStyle(
-                    fontFamily: 'Lexend',
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -517,7 +465,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
-  // WIDGET ROW CHIPS REKOMENDASI PERTANYAAN
   Widget _buildSuggestionChips() {
     return Container(
       height: 48,
@@ -544,7 +491,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
-                    color: const Color(0xFF1A2235).withValues(alpha: 0.15),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.15),
                     width: 1,
                   ),
                 ),
@@ -552,10 +499,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   child: Text(
                     text,
                     style: const TextStyle(
-                      fontFamily: 'Lexend',
-                      color: Color(0xFF1A2235),
+                      color: AppTheme.primaryBlue,
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -567,7 +513,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
-  // WIDGET BUBBLE PESAN INDIVIDUAL
   Widget _buildMessageBubble(Map<String, dynamic> data, bool isMe) {
     final text = data['text'] ?? '';
     final imageUrl = data['imageUrl'] as String?;
@@ -582,7 +527,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         child: Column(
           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
@@ -594,20 +539,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ? const EdgeInsets.all(6)
                   : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isMe ? const Color(0xFF1A2235) : Colors.white,
+                gradient: isMe ? AppTheme.primaryGradient : null,
+                color: isMe ? null : Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 16),
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isMe ? 20 : 4),
+                  bottomRight: Radius.circular(isMe ? 4 : 20),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: AppTheme.softShadow(),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +562,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         );
                       },
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                         child: Image.network(
                           imageUrl,
                           width: 220,
@@ -633,11 +573,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             return Container(
                               width: 220,
                               height: 220,
-                              color: Colors.grey[200],
+                              color: Colors.grey[100],
                               child: const Center(
-                                child: CircularProgressIndicator(
-                                  color: Color(0xFF1A2235),
-                                ),
+                                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
                               ),
                             );
                           },
@@ -645,16 +583,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             return Container(
                               width: 220,
                               height: 220,
-                              color: Colors.grey[200],
+                              color: Colors.grey[100],
                               child: const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.broken_image, color: Colors.grey, size: 40),
+                                  Icon(Icons.broken_image_rounded, color: Colors.grey, size: 40),
                                   SizedBox(height: 8),
-                                  Text(
-                                    "Gagal memuat gambar",
-                                    style: TextStyle(fontFamily: 'Lexend', fontSize: 12, color: Colors.grey),
-                                  ),
+                                  Text("Gagal memuat gambar", style: TextStyle(fontSize: 12, color: Colors.grey)),
                                 ],
                               ),
                             );
@@ -677,7 +612,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         height: 150,
                         decoration: BoxDecoration(
                           color: Colors.black87,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.white10),
                         ),
                         child: const Stack(
@@ -686,16 +621,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.video_collection,
-                                  color: Colors.white70,
-                                  size: 40,
-                                ),
+                                Icon(Icons.video_collection_rounded, color: Colors.white70, size: 40),
                                 SizedBox(height: 8),
                                 Text(
                                   "Pesan Video",
                                   style: TextStyle(
-                                    fontFamily: 'Lexend',
                                     color: Colors.white70,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -703,11 +633,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 ),
                                 Text(
                                   "Klik untuk memutar",
-                                  style: TextStyle(
-                                    fontFamily: 'Lexend',
-                                    color: Colors.white54,
-                                    fontSize: 10,
-                                  ),
+                                  style: TextStyle(color: Colors.white54, fontSize: 10),
                                 ),
                               ],
                             ),
@@ -715,11 +641,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               child: CircleAvatar(
                                 radius: 24,
                                 backgroundColor: Colors.white24,
-                                child: Icon(
-                                  Icons.play_arrow,
-                                  color: Colors.white,
-                                  size: 30,
-                                ),
+                                child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
                               ),
                             ),
                           ],
@@ -736,25 +658,25 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       child: Text(
                         text,
                         style: TextStyle(
-                          fontFamily: 'Lexend',
-                          color: isMe ? Colors.white : Colors.black87,
+                          color: isMe ? Colors.white : AppTheme.darkNavy,
                           fontSize: 14,
                           height: 1.4,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 timeFormatted,
                 style: TextStyle(
-                  fontFamily: 'Lexend',
-                  color: Colors.grey[500],
-                  fontSize: 10,
+                  color: AppTheme.secondaryBlue.withValues(alpha: 0.6),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -764,7 +686,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
-  // WIDGET INPUT FIELD PESAN DI BAWAH LAYAR
   Widget _buildMessageInputField() {
     return Container(
       color: Colors.white,
@@ -773,12 +694,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.image_outlined, color: Color(0xFF1A2235)),
+              icon: const Icon(Icons.image_outlined, color: AppTheme.primaryBlue),
               tooltip: "Kirim Gambar",
               onPressed: _pickAndSendImage,
             ),
             IconButton(
-              icon: const Icon(Icons.videocam_outlined, color: Color(0xFF1A2235)),
+              icon: const Icon(Icons.videocam_outlined, color: AppTheme.primaryBlue),
               tooltip: "Kirim Video",
               onPressed: _pickAndSendVideo,
             ),
@@ -786,16 +707,16 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F1EE),
+                  color: AppTheme.bgLight,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextField(
                   controller: _messageController,
                   maxLines: null,
-                  style: const TextStyle(fontFamily: 'Lexend', fontSize: 14),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.darkNavy),
                   decoration: const InputDecoration(
                     hintText: "Tulis pesan...",
-                    hintStyle: TextStyle(fontFamily: 'Lexend', color: Colors.grey),
+                    hintStyle: TextStyle(color: AppTheme.secondaryBlue, fontWeight: FontWeight.w500),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   ),
@@ -807,11 +728,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               onTap: () => _sendMessage(_messageController.text),
               child: const CircleAvatar(
                 radius: 20,
-                backgroundColor: Color(0xFF1A2235),
+                backgroundColor: AppTheme.primaryBlue,
                 child: Icon(
-                  Icons.send,
+                  Icons.send_rounded,
                   color: Colors.white,
-                  size: 18,
+                  size: 16,
                 ),
               ),
             ),
@@ -822,9 +743,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 }
 
-// ====================================================================
-// DIALOG PREVIEW FOTO CHAT
-// ====================================================================
 class ChatImagePreviewDialog extends StatelessWidget {
   final String imageUrl;
   const ChatImagePreviewDialog({super.key, required this.imageUrl});
@@ -862,7 +780,7 @@ class ChatImagePreviewDialog extends StatelessWidget {
             child: CircleAvatar(
               backgroundColor: Colors.black54,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -873,9 +791,6 @@ class ChatImagePreviewDialog extends StatelessWidget {
   }
 }
 
-// ====================================================================
-// DIALOG PEMUTAR VIDEO CHAT (MEMAKAI WIDGET DARI PACKAGE video_player)
-// ====================================================================
 class ChatVideoPlayerDialog extends StatefulWidget {
   final String videoUrl;
   const ChatVideoPlayerDialog({super.key, required this.videoUrl});
@@ -937,7 +852,7 @@ class _ChatVideoPlayerDialogState extends State<ChatVideoPlayerDialog> {
               padding: const EdgeInsets.all(20.0),
               child: Text(
                 _errorMessage,
-                style: const TextStyle(color: Colors.white, fontFamily: 'Lexend'),
+                style: const TextStyle(color: Colors.white),
                 textAlign: TextAlign.center,
               ),
             )
@@ -951,7 +866,7 @@ class _ChatVideoPlayerDialogState extends State<ChatVideoPlayerDialog> {
             child: CircleAvatar(
               backgroundColor: Colors.black54,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -970,7 +885,7 @@ class _ChatVideoPlayerDialogState extends State<ChatVideoPlayerDialog> {
         children: [
           IconButton(
             icon: Icon(
-              _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+              _controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               color: Colors.white,
             ),
             onPressed: () {
@@ -984,7 +899,7 @@ class _ChatVideoPlayerDialogState extends State<ChatVideoPlayerDialog> {
               _controller,
               allowScrubbing: true,
               colors: const VideoProgressColors(
-                playedColor: Colors.amber,
+                playedColor: AppTheme.sunsetOrange,
                 bufferedColor: Colors.white30,
                 backgroundColor: Colors.white10,
               ),
@@ -992,7 +907,7 @@ class _ChatVideoPlayerDialogState extends State<ChatVideoPlayerDialog> {
           ),
           IconButton(
             icon: Icon(
-              _controller.value.volume == 0 ? Icons.volume_mute : Icons.volume_up,
+              _controller.value.volume == 0 ? Icons.volume_mute_rounded : Icons.volume_up_rounded,
               color: Colors.white,
             ),
             onPressed: () {

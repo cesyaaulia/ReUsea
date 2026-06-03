@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/pages/login_page.dart';
 import 'package:reusea/pages/main_navigation.dart';
+import 'package:reusea/pages/landing_page.dart';
 import 'firebase_options.dart';
 import 'dart:ui';
 
@@ -32,8 +33,8 @@ class ReUseaApp extends StatelessWidget {
       title: 'ReUsea',
       initialRoute: '/', // Halaman pertama kali dibuka
       routes: {
-        '/login': (context) =>
-            const LoginPage(), // Daftarkan rute login di sini
+        '/login': (context) => const LoginPage(), // Daftarkan rute login di sini
+        '/landing': (context) => const LandingPage(), // Daftarkan rute landing page
       },
       debugShowCheckedModeBanner: false,
 
@@ -66,9 +67,10 @@ class ReUseaApp extends StatelessWidget {
           if (snapshot.hasData && snapshot.data != null) {
             return const MainNavigation();
           }
-          return const LoginPage();
+          return const LandingPage();
         },
       ),
     );
   }
 }
+

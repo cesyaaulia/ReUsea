@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
+import 'package:reusea/utils/theme.dart';
 import 'chat_detail_page.dart';
 
 class ChatPage extends StatefulWidget {
@@ -17,7 +18,6 @@ class _ChatPageState extends State<ChatPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late String _currentUserId;
 
-  // Mock chats data from friend's original code
   final List<Map<String, dynamic>> _mockChats = [
     {
       'name': 'Ahmad Fauzi',
@@ -86,295 +86,272 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     if (_currentUserId.isEmpty) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF2F1EE),
         body: Center(
           child: Text(
             "Silakan login terlebih dahulu.",
-            style: TextStyle(fontFamily: 'Lexend', color: Colors.grey),
+            style: TextStyle(color: AppTheme.secondaryBlue, fontWeight: FontWeight.bold),
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
-      appBar: AppBar(
-        title: const Text(
-          'Chats',
-          style: TextStyle(
-            fontFamily: 'Lexend',
-            color: Color(0xFF1A2235),
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: const Color(0xFFF2F1EE),
-        centerTitle: true,
-        elevation: 0,
-        surfaceTintColor: Colors.white,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(
-            color: Colors.grey[300],
-            height: 1.0,
-          ),
-        ),
-      ),
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: StreamBuilder<QuerySnapshot>(
-            stream: _dbService.getChatRoomsStream(_currentUserId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF1A2235),
+      backgroundColor: Colors.transparent,
+      body: OceanGradientBackground(
+        child: SafeArea(
+          bottom: false,
+          child: Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // App Bar Custom
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 15, 20, 10),
+                    child: Text(
+                      'Chats',
+                      style: TextStyle(
+                        color: AppTheme.darkNavy,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 26,
+                      ),
+                    ),
                   ),
-                );
-              }
+                  const SizedBox(height: 10),
 
-              // Jika Firestore tidak memiliki chat rooms aktif, tampilkan fallback mock chats teman
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return _buildMockChatList();
-              }
+                  // Chat List
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: _dbService.getChatRoomsStream(_currentUserId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+                          );
+                        }
 
-              final rooms = snapshot.data!.docs;
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return _buildMockChatList();
+                        }
 
-              // Urutkan di Dart memory berdasarkan lastMessageTime descending
-              rooms.sort((a, b) {
-                final aData = a.data() as Map<String, dynamic>;
-                final bData = b.data() as Map<String, dynamic>;
-                final aTime = aData['lastMessageTime'] as Timestamp?;
-                final bTime = bData['lastMessageTime'] as Timestamp?;
-                if (aTime == null && bTime == null) return 0;
-                if (aTime == null) return 1;
-                if (bTime == null) return -1;
-                return bTime.compareTo(aTime);
-              });
+                        final rooms = snapshot.data!.docs;
 
-              return ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: rooms.length,
-                separatorBuilder: (context, index) => const Divider(
-                  color: Colors.transparent,
-                  height: 10,
-                ),
-                itemBuilder: (context, index) {
-                  final roomData = rooms[index].data() as Map<String, dynamic>;
-                  
-                  // Temukan peer ID (user lawan bicara)
-                  List<dynamic> participants = roomData['participants'] ?? [];
-                  String peerId = participants.firstWhere(
-                    (p) => p != _currentUserId,
-                    orElse: () => '',
-                  );
+                        rooms.sort((a, b) {
+                          final aData = a.data() as Map<String, dynamic>;
+                          final bData = b.data() as Map<String, dynamic>;
+                          final aTime = aData['lastMessageTime'] as Timestamp?;
+                          final bTime = bData['lastMessageTime'] as Timestamp?;
+                          if (aTime == null && bTime == null) return 0;
+                          if (aTime == null) return 1;
+                          if (bTime == null) return -1;
+                          return bTime.compareTo(aTime);
+                        });
 
-                  if (peerId.isEmpty) return const SizedBox.shrink();
+                        return ListView.separated(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                          itemCount: rooms.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final roomData = rooms[index].data() as Map<String, dynamic>;
+                            
+                            List<dynamic> participants = roomData['participants'] ?? [];
+                            String peerId = participants.firstWhere(
+                              (p) => p != _currentUserId,
+                              orElse: () => '',
+                            );
 
-                  // Info Peer
-                  Map<String, dynamic> names = roomData['participantNames'] ?? {};
-                  Map<String, dynamic> photos = roomData['participantPhotos'] ?? {};
-                  
-                  String peerName = names[peerId] ?? 'Pengguna ReUsea';
-                  String peerPhoto = photos[peerId] ?? '';
+                            if (peerId.isEmpty) return const SizedBox.shrink();
 
-                  // Info Pesan Terakhir
-                  String lastMessage = roomData['lastMessage'] ?? 'Belum ada pesan';
-                  Timestamp? lastMessageTime = roomData['lastMessageTime'] as Timestamp?;
-                  String timeFormatted = _formatTimestamp(lastMessageTime);
+                            Map<String, dynamic> names = roomData['participantNames'] ?? {};
+                            Map<String, dynamic> photos = roomData['participantPhotos'] ?? {};
+                            
+                            String peerName = names[peerId] ?? 'Pengguna ReUsea';
+                            String peerPhoto = photos[peerId] ?? '';
 
-                  // Unread Count
-                  Map<String, dynamic> unreadMap = roomData['unreadCount'] ?? {};
-                  int unreadCount = unreadMap[_currentUserId] ?? 0;
+                            String lastMessage = roomData['lastMessage'] ?? 'Belum ada pesan';
+                            Timestamp? lastMessageTime = roomData['lastMessageTime'] as Timestamp?;
+                            String timeFormatted = _formatTimestamp(lastMessageTime);
 
-                  // Kita mock online status jika nama ada di mock list untuk visualisasi menarik
-                  bool isOnline = _mockChats.any((m) => m['name'] == peerName && m['isOnline'] == true);
+                            Map<String, dynamic> unreadMap = roomData['unreadCount'] ?? {};
+                            int unreadCount = unreadMap[_currentUserId] ?? 0;
 
-                  return _buildChatTileFromRoom(
-                    roomId: roomData['id'] ?? '',
-                    peerId: peerId,
-                    peerName: peerName,
-                    peerPhoto: peerPhoto,
-                    lastMessage: lastMessage,
-                    time: timeFormatted,
-                    unreadCount: unreadCount,
-                    isOnline: isOnline,
-                  );
-                },
-              );
-            },
+                            bool isOnline = _mockChats.any((m) => m['name'] == peerName && m['isOnline'] == true);
+
+                            return _buildChatTileFromRoom(
+                              roomId: roomData['id'] ?? '',
+                              peerId: peerId,
+                              peerName: peerName,
+                              peerPhoto: peerPhoto,
+                              lastMessage: lastMessage,
+                              time: timeFormatted,
+                              unreadCount: unreadCount,
+                              isOnline: isOnline,
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  // List mock chats builder
   Widget _buildMockChatList() {
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
       itemCount: _mockChats.length,
-      separatorBuilder: (context, index) => const Divider(
-        color: Colors.transparent,
-        height: 10,
-      ),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final chat = _mockChats[index];
-        return InkWell(
-          onTap: () async {
-            final navigator = Navigator.of(context);
-            // Tampilkan loading indicator saat inisialisasi room chat mock
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF1A2235),
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppTheme.softShadow(),
+            border: Border.all(
+              color: AppTheme.primaryBlue.withValues(alpha: 0.04),
+              width: 1,
+            ),
+          ),
+          child: ListTile(
+            onTap: () async {
+              final navigator = Navigator.of(context);
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(color: AppTheme.primaryBlue),
                 ),
-              ),
-            );
-
-            String mockPeerId = 'mock_${chat['name'].toString().toLowerCase().replaceAll(' ', '_')}';
-            String mockRoomId = _currentUserId.compareTo(mockPeerId) < 0
-                ? '${_currentUserId}_$mockPeerId'
-                : '${mockPeerId}_$_currentUserId';
-
-            try {
-              // Coba buat/ambil room chat di Firestore agar pesan tersimpan secara riil
-              String roomId = await _dbService.getOrCreateChatRoom(
-                buyerId: _currentUserId,
-                buyerName: _auth.currentUser?.displayName ?? _auth.currentUser?.email?.split('@')[0] ?? 'Pembeli',
-                buyerPhoto: _auth.currentUser?.photoURL ?? '',
-                sellerId: mockPeerId,
-                sellerName: chat['name'],
-                sellerPhoto: chat['avatarUrl'],
               );
 
-              navigator.pop(); // Tutup loading
+              String mockPeerId = 'mock_${chat['name'].toString().toLowerCase().replaceAll(' ', '_')}';
+              String mockRoomId = _currentUserId.compareTo(mockPeerId) < 0
+                  ? '${_currentUserId}_$mockPeerId'
+                  : '${mockPeerId}_$_currentUserId';
 
-              navigator.push(
-                SlideFadeRightRoute(
-                  page: ChatDetailPage(
-                    roomId: roomId,
-                    peerId: mockPeerId,
-                    peerName: chat['name'],
-                    peerPhoto: chat['avatarUrl'],
+              try {
+                String roomId = await _dbService.getOrCreateChatRoom(
+                  buyerId: _currentUserId,
+                  buyerName: _auth.currentUser?.displayName ?? _auth.currentUser?.email?.split('@')[0] ?? 'Pembeli',
+                  buyerPhoto: _auth.currentUser?.photoURL ?? '',
+                  sellerId: mockPeerId,
+                  sellerName: chat['name'],
+                  sellerPhoto: chat['avatarUrl'],
+                );
+
+                navigator.pop(); 
+
+                navigator.push(
+                  SlideFadeRightRoute(
+                    page: ChatDetailPage(
+                      roomId: roomId,
+                      peerId: mockPeerId,
+                      peerName: chat['name'],
+                      peerPhoto: chat['avatarUrl'],
+                    ),
                   ),
-                ),
-              );
-            } catch (e) {
-              navigator.pop(); // Tutup loading
-              // Fallback langsung navigasi jika ada kendala database
-              navigator.push(
-                SlideFadeRightRoute(
-                  page: ChatDetailPage(
-                    roomId: mockRoomId,
-                    peerId: mockPeerId,
-                    peerName: chat['name'],
-                    peerPhoto: chat['avatarUrl'],
+                );
+              } catch (e) {
+                navigator.pop(); 
+                navigator.push(
+                  SlideFadeRightRoute(
+                    page: ChatDetailPage(
+                      roomId: mockRoomId,
+                      peerId: mockPeerId,
+                      peerName: chat['name'],
+                      peerPhoto: chat['avatarUrl'],
+                    ),
                   ),
-                ),
-              );
-            }
-          },
-          child: Container(
-            color: Colors.transparent,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+                );
+              }
+            },
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: Stack(
               children: [
-                // Avatar
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.grey[300],
-                      backgroundImage: NetworkImage(chat['avatarUrl']),
-                    ),
-                    if (chat['isOnline'] == true)
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: Colors.greenAccent[400],
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFF2F1EE), width: 2),
-                          ),
-                        ),
-                      ),
-                  ],
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: AppTheme.bgLight,
+                  backgroundImage: NetworkImage(chat['avatarUrl']),
                 ),
-                const SizedBox(width: 16),
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        chat['name'],
-                        style: const TextStyle(
-                          fontFamily: 'Lexend',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF0F172A),
-                        ),
+                if (chat['isOnline'] == true)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 13,
+                      height: 13,
+                      decoration: BoxDecoration(
+                        color: AppTheme.ecoTeal,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        chat['message'],
-                        style: TextStyle(
-                          fontFamily: 'Lexend',
-                          color: Colors.blueGrey[300],
-                          fontSize: 14,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                    ),
+                  ),
+              ],
+            ),
+            title: Text(
+              chat['name'],
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: AppTheme.darkNavy,
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                chat['message'],
+                style: TextStyle(
+                  color: AppTheme.secondaryBlue.withValues(alpha: 0.7),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  chat['time'],
+                  style: TextStyle(
+                    color: AppTheme.secondaryBlue.withValues(alpha: 0.5),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Time badge
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      chat['time'],
-                      style: TextStyle(
-                        fontFamily: 'Lexend',
-                        color: Colors.blueGrey[300],
-                        fontSize: 12,
-                      ),
+                const SizedBox(height: 6),
+                if (chat['unreadCount'] > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.coralPeach,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: AppTheme.glowShadow(color: AppTheme.coralPeach),
                     ),
-                    const SizedBox(height: 6),
-                    if (chat['unreadCount'] > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 20,
-                        ),
-                        child: Text(
-                          chat['unreadCount'].toString(),
-                          style: const TextStyle(
-                            fontFamily: 'Lexend',
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 18),
-                  ],
-                ),
+                    constraints: const BoxConstraints(minWidth: 20),
+                    child: Text(
+                      chat['unreadCount'].toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  const SizedBox(height: 18),
               ],
             ),
           ),
@@ -383,7 +360,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  // Real room list item builder
   Widget _buildChatTileFromRoom({
     required String roomId,
     required String peerId,
@@ -394,126 +370,114 @@ class _ChatPageState extends State<ChatPage> {
     required int unreadCount,
     required bool isOnline,
   }) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          SlideFadeRightRoute(
-            page: ChatDetailPage(
-              roomId: roomId,
-              peerId: peerId,
-              peerName: peerName,
-              peerPhoto: peerPhoto,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        color: Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            // Avatar
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: const Color(0xFFE2E8F0),
-                  backgroundImage: peerPhoto.isNotEmpty && peerPhoto.startsWith('http')
-                      ? NetworkImage(peerPhoto)
-                      : null,
-                  child: peerPhoto.isEmpty || !peerPhoto.startsWith('http')
-                      ? const Icon(Icons.person, size: 28, color: Colors.grey)
-                      : null,
-                ),
-                if (isOnline)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: Colors.greenAccent[400],
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFF2F1EE), width: 2),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 16),
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    peerName,
-                    style: TextStyle(
-                      fontFamily: 'Lexend',
-                      fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
-                      fontSize: 16,
-                      color: const Color(0xFF0F172A),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    lastMessage,
-                    style: TextStyle(
-                      fontFamily: 'Lexend',
-                      color: unreadCount > 0 ? const Color(0xFF0F172A) : Colors.blueGrey[300],
-                      fontSize: 13,
-                      fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppTheme.softShadow(),
+        border: Border.all(
+          color: AppTheme.primaryBlue.withValues(alpha: 0.04),
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        onTap: () {
+          Navigator.push(
+            context,
+            SlideFadeRightRoute(
+              page: ChatDetailPage(
+                roomId: roomId,
+                peerId: peerId,
+                peerName: peerName,
+                peerPhoto: peerPhoto,
               ),
             ),
-            const SizedBox(width: 8),
-            // Time & Badge
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  time,
-                  style: TextStyle(
-                    fontFamily: 'Lexend',
-                    color: unreadCount > 0 ? const Color(0xFF1A2235) : Colors.blueGrey[300],
-                    fontSize: 11,
-                    fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+          );
+        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: AppTheme.bgLight,
+              backgroundImage: peerPhoto.isNotEmpty && peerPhoto.startsWith('http')
+                  ? NetworkImage(peerPhoto)
+                  : null,
+              child: peerPhoto.isEmpty || !peerPhoto.startsWith('http')
+                  ? const Icon(Icons.person_rounded, size: 26, color: AppTheme.secondaryBlue)
+                  : null,
+            ),
+            if (isOnline)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 13,
+                  height: 13,
+                  decoration: BoxDecoration(
+                    color: AppTheme.ecoTeal,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
                 ),
-                const SizedBox(height: 8),
-                if (unreadCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                    ),
-                    child: Text(
-                      unreadCount.toString(),
-                      style: const TextStyle(
-                        fontFamily: 'Lexend',
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                else
-                  const SizedBox(height: 18),
-              ],
+              ),
+          ],
+        ),
+        title: Text(
+          peerName,
+          style: TextStyle(
+            fontWeight: unreadCount > 0 ? FontWeight.w900 : FontWeight.bold,
+            fontSize: 15,
+            color: AppTheme.darkNavy,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            lastMessage,
+            style: TextStyle(
+              color: unreadCount > 0 ? AppTheme.darkNavy : AppTheme.secondaryBlue.withValues(alpha: 0.7),
+              fontSize: 13,
+              fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              time,
+              style: TextStyle(
+                color: unreadCount > 0 ? AppTheme.primaryBlue : AppTheme.secondaryBlue.withValues(alpha: 0.5),
+                fontSize: 11,
+                fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (unreadCount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.coralPeach,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: AppTheme.glowShadow(color: AppTheme.coralPeach),
+                ),
+                constraints: const BoxConstraints(minWidth: 20),
+                child: Text(
+                  unreadCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              const SizedBox(height: 18),
           ],
         ),
       ),

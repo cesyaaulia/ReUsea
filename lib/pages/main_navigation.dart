@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:reusea/utils/page_transitions.dart';
+import 'package:reusea/utils/theme.dart';
 import 'home_page.dart';
 import 'chat_page.dart';
 import 'my_items_page.dart';
@@ -17,9 +18,9 @@ class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   int _previousIndex = 0;
 
-  // Daftar halaman utama Bottom Navigation Bar ReUsea
+  // Halaman yang sesuai dengan navigasi (indeks: 0 -> Home, 1 -> Chat, 2 -> My Items, 3 -> Profile)
   final List<Widget> _pages = [
-    const HomePage(), // Sekarang memanggil file terpisah
+    const HomePage(),
     const ChatPage(),
     const MyItemsPage(),
     const ProfilePage(),
@@ -28,12 +29,12 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Memungkinkan body menggantung di belakang Bottom Bar melayang
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 350),
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
         transitionBuilder: (Widget child, Animation<double> animation) {
-          // Tentukan arah slide berdasarkan index tab
           final isForward = _selectedIndex > _previousIndex;
           final slideAnimation = Tween<Offset>(
             begin: Offset(isForward ? 0.15 : -0.15, 0.0),
@@ -53,54 +54,42 @@ class _MainNavigationState extends State<MainNavigation> {
           child: _pages[_selectedIndex],
         ),
       ),
-      // TOMBOL PLUS TENGAH MELAYANG (Desain Hijau Khas Eco-Friendly)
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            SlideUpRoute(page: const SellItemPage()),
-          );
-        },
-        backgroundColor: const Color(0xFF1A2235),
-        elevation: 2,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 30),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      // BOTTOM BAR DENGAN CEKUNGAN TENGAH (CircularNotchedRectangle)
-      bottomNavigationBar: BottomAppBar(
-        padding: EdgeInsets.zero,
-        height: 70,
-        color: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0),
-            _buildNavItem(
-              Icons.chat_bubble_outline,
-              Icons.chat_bubble,
-              'Chat',
-              1,
+      bottomNavigationBar: Container(
+        color: Colors.transparent,
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: SafeArea(
+          bottom: true,
+          child: GlassContainer(
+            radius: 28,
+            blur: 15,
+            opacity: 0.65,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.home_outlined, Icons.home_rounded, 'Home', 0),
+                _buildNavItem(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chat', 1),
+                
+                // Tombol Sell di Tengah
+                AnimatedSellButton(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      SlideUpRoute(page: const SellItemPage()),
+                    );
+                  },
+                ),
+                
+                _buildNavItem(Icons.storefront_outlined, Icons.storefront_rounded, 'My Items', 2),
+                _buildNavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profile', 3),
+              ],
             ),
-            const SizedBox(width: 40), // Ruang kosong khusus untuk cekungan FAB
-            _buildNavItem(
-              Icons.storefront_outlined,
-              Icons.storefront,
-              'My Items',
-              2,
-            ),
-            _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 3),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // Helper Widget pembentuk item menu navigasi bawah
   Widget _buildNavItem(
     IconData icon,
     IconData activeIcon,
@@ -108,30 +97,125 @@ class _MainNavigationState extends State<MainNavigation> {
     int index,
   ) {
     bool isSelected = _selectedIndex == index;
-    Color activeColor = const Color(0xFF1A2235); // Warna navy premium ReUsea
+    Color activeColor = AppTheme.primaryBlue;
 
-    return InkWell(
-      onTap: () => setState(() {
-        _previousIndex = _selectedIndex;
-        _selectedIndex = index;
-      }),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isSelected ? activeIcon : icon,
-            color: isSelected ? activeColor : Colors.grey,
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() {
+          _previousIndex = _selectedIndex;
+          _selectedIndex = index;
+        }),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedScale(
+                scale: isSelected ? 1.15 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  isSelected ? activeIcon : icon,
+                  color: isSelected ? activeColor : AppTheme.secondaryBlue.withValues(alpha: 0.7),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? activeColor : AppTheme.secondaryBlue.withValues(alpha: 0.7),
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? activeColor : Colors.grey,
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+}
+
+/// Tombol Sell di Tengah dengan Skala Animasi & Wave Glow
+class AnimatedSellButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const AnimatedSellButton({super.key, required this.onTap});
+
+  @override
+  State<AnimatedSellButton> createState() => _AnimatedSellButtonState();
+}
+
+class _AnimatedSellButtonState extends State<AnimatedSellButton>
+    with SingleTickerProviderStateMixin {
+  double _scale = 1.0;
+  late AnimationController _glowController;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.85),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 150),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Wave Glow Ripple Effect
+            AnimatedBuilder(
+              animation: _glowController,
+              builder: (context, child) {
+                return Container(
+                  width: 58 + (_glowController.value * 8),
+                  height: 58 + (_glowController.value * 8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.primaryBlue.withValues(
+                      alpha: 0.15 * (1.0 - _glowController.value),
+                    ),
+                  ),
+                );
+              },
             ),
-          ),
-        ],
+            // Tombol Utama
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppTheme.primaryGradient,
+                boxShadow: AppTheme.glowShadow(color: AppTheme.primaryBlue),
+              ),
+              child: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

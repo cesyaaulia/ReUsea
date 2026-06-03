@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Wajib import Firestore untuk menghitung data
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:reusea/services/auth_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
+import 'package:reusea/utils/theme.dart';
 import 'settings_page.dart';
 import 'edit_profile_page.dart';
 import 'login_page.dart';
@@ -16,21 +17,26 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final AuthService authService = AuthService();
 
-    // FUNGSI DIALOG LOGOUT
     void handleLogout() async {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text("Log Out"),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            "Log Out",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: const Text(
             "Apakah Anda yakin ingin keluar dari akun ReUsea?",
+            style: TextStyle(color: AppTheme.secondaryBlue),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Batal"),
+              child: const Text("Batal", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () async {
                 Navigator.pop(context);
                 await authService.logout();
@@ -41,7 +47,11 @@ class ProfilePage extends StatelessWidget {
                   );
                 }
               },
-              child: const Text("Keluar", style: TextStyle(color: Colors.red)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.coralPeach,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text("Keluar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -49,176 +59,198 @@ class ProfilePage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F1EE),
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Profile',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Color(0xFF1A2235)),
-            onPressed: () => Navigator.push(
-              context,
-              FadeScaleRoute(page: const SettingsPage()),
-            ),
-          ),
-        ],
-      ),
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 800),
+      backgroundColor: Colors.transparent,
+      body: OceanGradientBackground(
+        child: SafeArea(
+          bottom: false,
           child: StreamBuilder<User?>(
             stream: FirebaseAuth.instance.userChanges(),
             builder: (context, snapshot) {
               final currentUser = snapshot.data;
 
-              String userEmail = currentUser?.email ?? "budi.21001@mhs.unesa.ac.id";
+              String userEmail = currentUser?.email ?? "student@mhs.unesa.ac.id";
               String userName = currentUser?.displayName ?? userEmail.split('@')[0];
               String? photoUrl = currentUser?.photoURL;
               String currentUserId = currentUser?.uid ?? '';
 
-              return SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Container(
-                      color: const Color(0xFFF2F1EE),
-                      width: double.infinity,
-                      padding: const EdgeInsets.only(bottom: 30, top: 10),
-                      child: Column(
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // Custom App Bar
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 15, 20, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          CircleAvatar(
-                            radius: 55,
-                            backgroundColor: const Color(0xFFF0F0F0),
-                            backgroundImage: photoUrl != null
-                                ? NetworkImage(photoUrl)
-                                : null,
-                            child: photoUrl == null
-                                ? const Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: Colors.grey,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(height: 15),
-                          Text(
-                            userName,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                          const Text(
+                            'Profile',
+                            style: TextStyle(
+                              color: AppTheme.darkNavy,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 26,
                             ),
                           ),
-                          Text(
-                            userEmail,
-                            style: const TextStyle(
-                              color: Color(0xFF1A2235),
-                              fontSize: 13,
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: AppTheme.softShadow(),
                             ),
-                          ),
-                          const SizedBox(height: 25),
-
-                          // =========================================================
-                          // BAGIAN STATISTIK (Solds & Bought Berhasil Di-Sync Live)
-                          // =========================================================
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildSoldsStat(
-                                currentUserId,
-                              ), // Panggil fungsi Stream Solds
-                              Container(
-                                height: 30,
-                                width: 1,
-                                color: Colors.grey[200],
+                            child: IconButton(
+                              icon: const Icon(Icons.settings_outlined, color: AppTheme.darkNavy),
+                              onPressed: () => Navigator.push(
+                                context,
+                                FadeScaleRoute(page: const SettingsPage()),
                               ),
-                              _buildBoughtStat(
-                                currentUserId,
-                              ), // Panggil fungsi Stream Bought
-                            ],
+                            ),
                           ),
                         ],
                       ),
                     ),
+                  ),
 
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
+                  // Profile Card
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: AppTheme.softShadow(),
+                          border: Border.all(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            // Photo Profile
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: AppTheme.oceanWaveGradient,
+                              ),
+                              child: CircleAvatar(
+                                radius: 52,
+                                backgroundColor: AppTheme.bgLight,
+                                backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                                child: photoUrl == null
+                                    ? const Icon(Icons.person_rounded, size: 52, color: AppTheme.secondaryBlue)
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // User Name
+                            Text(
+                              userName,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: AppTheme.darkNavy,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            // User Email
+                            Text(
+                              userEmail,
+                              style: TextStyle(
+                                color: AppTheme.secondaryBlue.withValues(alpha: 0.8),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Divider(height: 40, thickness: 1, color: Color(0xFFF0F4F8)),
+
+                            // Statistics Cards
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Expanded(child: _buildSoldsStat(currentUserId)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildBoughtStat(currentUserId)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Menu Option List
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8, bottom: 12),
+                          child: Text(
                             'TRANSACTION HISTORY',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.secondaryBlue,
+                              letterSpacing: 1.0,
                             ),
                           ),
-                          const SizedBox(height: 12),
-
-                          _buildMenuTile(
-                            Icons.shopping_bag_outlined,
-                            'Past Buys',
-                            'History of items you purchased',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                SlideRightRoute(
-                                  page: const PastBuysPage(),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 10),
-
-                          _buildMenuTile(
-                            Icons.sell_outlined,
-                            'Past Sells',
-                            'Track items you have sold',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                SlideRightRoute(
-                                  page: const PastSellsPage(),
-                                ),
-                              );
-                            },
-                          ),
-
-                          const SizedBox(height: 25),
-                          const Text(
+                        ),
+                        _buildMenuTile(
+                          Icons.shopping_bag_outlined,
+                          'Past Buys',
+                          'History of items you purchased',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              SlideRightRoute(page: const PastBuysPage()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMenuTile(
+                          Icons.sell_outlined,
+                          'Past Sells',
+                          'Track items you have sold',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              SlideRightRoute(page: const PastSellsPage()),
+                            );
+                          },
+                        ),
+                        
+                        const SizedBox(height: 30),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8, bottom: 12),
+                          child: Text(
                             'MANAGE DATA',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.secondaryBlue,
+                              letterSpacing: 1.0,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          _buildMenuTile(
-                            Icons.manage_accounts_outlined,
-                            'Edit Profile Info',
-                            '',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                SlideUpRoute(
-                                  page: const EditProfilePage(),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 10),
-                          _buildLogoutTile(onTap: handleLogout),
-                        ],
-                      ),
+                        ),
+                        _buildMenuTile(
+                          Icons.manage_accounts_outlined,
+                          'Edit Profile Info',
+                          'Manage username, photo, and details',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              SlideUpRoute(page: const EditProfilePage()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLogoutTile(onTap: handleLogout),
+                      ]),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           ),
@@ -227,9 +259,6 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // =========================================================
-  // WIDGET STREAM UNTUK MENGHITUNG JUMLAH BARANG TERJUAL (SOLDS)
-  // =========================================================
   Widget _buildSoldsStat(String uid) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -242,14 +271,11 @@ class ProfilePage extends StatelessWidget {
         if (snapshot.hasData) {
           count = snapshot.data!.docs.length.toString();
         }
-        return _buildStatColumn(count, 'Solds');
+        return _buildStatBox(count, 'Solds', AppTheme.oceanWaveGradient);
       },
     );
   }
 
-  // =========================================================
-  // WIDGET STREAM UNTUK MENGHITUNG JUMLAH BARANG TERBELI (BOUGHT)
-  // =========================================================
   Widget _buildBoughtStat(String uid) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -262,24 +288,38 @@ class ProfilePage extends StatelessWidget {
         if (snapshot.hasData) {
           count = snapshot.data!.docs.length.toString();
         }
-        return _buildStatColumn(count, 'Bought');
+        return _buildStatBox(count, 'Bought', AppTheme.sunsetGradient);
       },
     );
   }
 
-  Widget _buildStatColumn(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A2235),
+  Widget _buildStatBox(String value, String label, LinearGradient gradient) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.bgLight,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          ShaderMask(
+            shaderCallback: (bounds) => gradient.createShader(bounds),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Colors.white, // fallback color
+              ),
+            ),
           ),
-        ),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-      ],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(color: AppTheme.secondaryBlue, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
     );
   }
 
@@ -292,26 +332,35 @@ class ProfilePage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppTheme.softShadow(),
+        border: Border.all(
+          color: AppTheme.primaryBlue.withValues(alpha: 0.04),
+          width: 1,
+        ),
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: const Color(0xFF1A2235)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryBlue.withValues(alpha: 0.06),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppTheme.primaryBlue, size: 20),
+        ),
         title: Text(
           title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.darkNavy),
         ),
         subtitle: subtitle.isNotEmpty
-            ? Text(subtitle, style: const TextStyle(fontSize: 11))
+            ? Text(
+                subtitle,
+                style: TextStyle(fontSize: 11, color: AppTheme.secondaryBlue.withValues(alpha: 0.7), fontWeight: FontWeight.w500),
+              )
             : null,
-        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+        trailing: const Icon(Icons.chevron_right_rounded, size: 20, color: AppTheme.secondaryBlue),
       ),
     );
   }
@@ -320,19 +369,33 @@ class ProfilePage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppTheme.softShadow(),
+        border: Border.all(
+          color: Colors.redAccent.withValues(alpha: 0.1),
+          width: 1,
+        ),
       ),
       child: ListTile(
         onTap: onTap,
-        leading: const Icon(Icons.logout, color: Colors.redAccent),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.redAccent.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+        ),
         title: const Text(
           'Log Out',
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w800,
             color: Colors.redAccent,
           ),
         ),
+        trailing: const Icon(Icons.chevron_right_rounded, size: 20, color: Colors.redAccent),
       ),
     );
   }
