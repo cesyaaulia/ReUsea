@@ -1,9 +1,9 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:reusea/services/auth_service.dart';
 import 'package:reusea/services/database_service.dart';
+import 'package:reusea/utils/theme.dart';
 
 class SellItemPage extends StatefulWidget {
   const SellItemPage({super.key});
@@ -155,104 +155,221 @@ class _SellItemPageState extends State<SellItemPage> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F1EE),
+        backgroundColor: Colors.transparent,
         title: const Text(
           "Jual Barang",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppTheme.darkNavy, fontWeight: FontWeight.w900, fontSize: 20),
         ),
         centerTitle: true,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.darkNavy, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // =============================================
-            // SECTION: MULTI-FOTO PRODUK
-            // =============================================
-            const Text(
-              "Foto Produk",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            Text(
-              "Tambahkan hingga $maxPhotos foto (tap + untuk tambah)",
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            _buildPhotoGrid(),
-            const SizedBox(height: 25),
-
-            // =============================================
-            // SECTION: NAMA PRODUK
-            // =============================================
-            _buildInputLabel("Nama Produk"),
-            _buildTextField("cth. Almamater UNESA Size L", _nameController),
-            const SizedBox(height: 15),
-
-            // =============================================
-            // SECTION: HARGA & KATEGORI (Row)
-            // =============================================
-            Row(
+      body: OceanGradientBackground(
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
+                // Ilustrasi ombak / teks sambutan atas
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: AppTheme.glowShadow(color: AppTheme.primaryBlue),
+                  ),
+                  child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInputLabel("Harga"),
-                      _buildTextField(
-                        "Rp 0",
-                        _priceController,
-                        keyboardType: TextInputType.number,
-                        formatters: [CurrencyInputFormatter()],
+                      Text(
+                        "Beri Kesempatan Kedua! ♻",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        "Upload barang kuliahmu yang tidak terpakai agar bisa digunakan kembali oleh sesama mahasiswa UNESA.",
+                        style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 15),
-                Expanded(
+    
+                // Main Form Card
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: AppTheme.softShadow(color: AppTheme.primaryBlue),
+                    border: Border.all(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.03),
+                      width: 1,
+                    ),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInputLabel("Kategori"),
+                      // =============================================
+                      // SECTION: MULTI-FOTO PRODUK
+                      // =============================================
+                      const Text(
+                        "Foto Produk",
+                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppTheme.darkNavy),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Tambahkan hingga $maxPhotos foto (foto pertama jadi foto utama)",
+                        style: const TextStyle(fontSize: 11, color: AppTheme.secondaryBlue, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPhotoGrid(),
+                      const SizedBox(height: 28),
+    
+                      // =============================================
+                      // SECTION: NAMA PRODUK
+                      // =============================================
+                      _buildInputLabel("Nama Produk"),
+                      _buildTextField("cth. Almamater UNESA Size L", _nameController),
+                      const SizedBox(height: 20),
+    
+                      // =============================================
+                      // SECTION: HARGA & KATEGORI (Row)
+                      // =============================================
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildInputLabel("Harga"),
+                                _buildTextField(
+                                  "Rp 0",
+                                  _priceController,
+                                  keyboardType: TextInputType.number,
+                                  formatters: [CurrencyInputFormatter()],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildInputLabel("Kategori"),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  height: 55,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.bgLight,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.transparent),
+                                  ),
+                                  child: DropdownButtonFormField<String>(
+                                    value: selectedCategory,
+                                    dropdownColor: Colors.white,
+                                    icon: const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: AppTheme.primaryBlue,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                    ),
+                                    isExpanded: true,
+                                    style: const TextStyle(fontSize: 13, color: AppTheme.darkNavy, fontWeight: FontWeight.bold),
+                                    items: categories.map((String cat) {
+                                      return DropdownMenuItem<String>(
+                                        value: cat,
+                                        child: Text(cat),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        selectedCategory = newValue!;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+    
+                      // =============================================
+                      // SECTION: KONDISI BARANG (Baru / Bekas)
+                      // =============================================
+                      _buildInputLabel("Kondisi Barang"),
+                      Row(
+                        children: [
+                          _buildConditionChip("Baru", Icons.fiber_new_outlined),
+                          const SizedBox(width: 16),
+                          _buildConditionChip("Bekas", Icons.recycling_outlined),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+    
+                      // =============================================
+                      // SECTION: DESKRIPSI
+                      // =============================================
+                      _buildInputLabel("Deskripsi"),
+                      _buildTextField(
+                        "Jelaskan kondisi barang, kelengkapan, minus, dll.",
+                        _descriptionController,
+                        maxLines: 4,
+                      ),
+                      const SizedBox(height: 20),
+    
+                      // =============================================
+                      // SECTION: LOKASI PICKUP
+                      // =============================================
+                      _buildInputLabel("Lokasi Pengambilan"),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        height: 57,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
+                          color: AppTheme.bgLight,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.transparent),
                         ),
                         child: DropdownButtonFormField<String>(
-                          value: selectedCategory,
+                          initialValue: selectedLocation,
+                          dropdownColor: Colors.white,
                           icon: const Icon(
-                            Icons.arrow_drop_down,
-                            color: Color(0xFF1A2235),
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppTheme.primaryBlue,
                           ),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
+                            prefixIcon: Icon(Icons.location_on_rounded, color: AppTheme.primaryBlue, size: 18),
+                            prefixIconConstraints: BoxConstraints(minWidth: 32),
                           ),
-                          isExpanded: true,
-                          items: categories.map((String cat) {
+                          style: const TextStyle(fontSize: 13, color: AppTheme.darkNavy, fontWeight: FontWeight.bold),
+                          items: [
+                            "UNESA Lidah Wetan, Surabaya",
+                            "UNESA Ketintang, Surabaya",
+                          ].map((String location) {
                             return DropdownMenuItem<String>(
-                              value: cat,
-                              child: Text(
-                                cat,
-                                style: const TextStyle(fontSize: 14),
-                              ),
+                              value: location,
+                              child: Text(location),
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
                             setState(() {
-                              selectedCategory = newValue!;
+                              selectedLocation = newValue!;
                             });
                           },
                         ),
@@ -260,113 +377,49 @@ class _SellItemPageState extends State<SellItemPage> {
                     ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 15),
-
-            // =============================================
-            // SECTION: KONDISI BARANG (Baru / Bekas)
-            // =============================================
-            _buildInputLabel("Kondisi Barang"),
-            Row(
-              children: [
-                _buildConditionChip("Baru", Icons.fiber_new_outlined),
-                const SizedBox(width: 12),
-                _buildConditionChip("Bekas", Icons.recycling_outlined),
-              ],
-            ),
-            const SizedBox(height: 15),
-
-            // =============================================
-            // SECTION: DESKRIPSI
-            // =============================================
-            _buildInputLabel("Deskripsi"),
-            _buildTextField(
-              "Jelaskan kondisi barang, lama pemakaian, dll.",
-              _descriptionController,
-              maxLines: 4,
-            ),
-            const SizedBox(height: 15),
-
-            // =============================================
-            // SECTION: LOKASI PICKUP
-            // =============================================
-            _buildInputLabel("Lokasi Pengambilan"),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: DropdownButtonFormField<String>(
-              initialValue: selectedLocation,
-              icon: const Icon(
-                Icons.arrow_drop_down,
-                color: Color(0xFF1A2235),
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                prefixIcon: Icon(Icons.location_on, color: Color(0xFF1A2235)),
-              ),
-                items:
-                    [
-                      "UNESA Lidah Wetan, Surabaya",
-                      "UNESA Ketintang, Surabaya",
-                    ].map((String location) {
-                      return DropdownMenuItem<String>(
-                        value: location,
-                        child: Text(
-                          location,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      );
-                    }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedLocation = newValue!;
-                  });
-                },
-              ),
-            ),
-
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleUploadItem,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A2235),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+    
+                const SizedBox(height: 32),
+                
+                // Submit Button
+                GestureDetector(
+                  onTap: _isLoading ? null : _handleUploadItem,
+                  child: Container(
+                    width: double.infinity,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      gradient: _isLoading ? null : AppTheme.primaryGradient,
+                      color: _isLoading ? Colors.grey : null,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: _isLoading ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
+                    ),
+                    alignment: Alignment.center,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Upload Barang",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                   ),
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        "Upload Barang",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
-
+  
   // =============================================
-  // WIDGET: GRID FOTO MULTI-SLOT
+  // WIDGET: GRID FOTO MULTI-SLOT (WITH ANIMATION EFFECT)
   // =============================================
   Widget _buildPhotoGrid() {
     return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+      spacing: 12,
+      runSpacing: 12,
       children: [
         // Tampilkan semua foto yang sudah dipilih
         for (int i = 0; i < _imageBytesList.length; i++)
@@ -376,28 +429,27 @@ class _SellItemPageState extends State<SellItemPage> {
           GestureDetector(
             onTap: _pickImage,
             child: Container(
-              width: 100,
-              height: 100,
+              width: 90,
+              height: 90,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                color: AppTheme.bgLight,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: const Color(0xFF1A2235).withValues(alpha: 0.5),
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.15),
                   width: 1.5,
-                  strokeAlign: BorderSide.strokeAlignInside,
                 ),
               ),
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.add_photo_alternate_outlined,
-                      color: Color(0xFF1A2235), size: 28),
+                      color: AppTheme.primaryBlue, size: 24),
                   SizedBox(height: 4),
                   Text(
                     "Tambah",
                     style: TextStyle(
                       fontSize: 10,
-                      color: Color(0xFF1A2235),
+                      color: AppTheme.primaryBlue,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -408,23 +460,25 @@ class _SellItemPageState extends State<SellItemPage> {
       ],
     );
   }
-
+  
   // Widget untuk menampilkan satu foto + tombol hapus
   Widget _buildPhotoItem(int index) {
     bool isFirst = index == 0;
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         Container(
-          width: 100,
-          height: 100,
+          width: 90,
+          height: 90,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppTheme.softShadow(),
             border: isFirst
-                ? Border.all(color: const Color(0xFF1A2235), width: 2)
-                : null,
+                ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                : Border.all(color: Colors.transparent),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(isFirst ? 10 : 12),
+            borderRadius: BorderRadius.circular(isFirst ? 14 : 16),
             child: Image.memory(_imageBytesList[index], fit: BoxFit.cover),
           ),
         ),
@@ -436,46 +490,50 @@ class _SellItemPageState extends State<SellItemPage> {
             right: 0,
             child: Container(
               decoration: const BoxDecoration(
-                color: Color(0xFF1A2235),
+                gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(10),
-                  bottomRight: Radius.circular(10),
+                  bottomLeft: Radius.circular(14),
+                  bottomRight: Radius.circular(14),
                 ),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 2),
+              padding: const EdgeInsets.symmetric(vertical: 3),
               child: const Text(
                 "UTAMA",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
           ),
         // Tombol hapus foto (X)
         Positioned(
-          top: -2,
-          right: -2,
+          top: -6,
+          right: -6,
           child: GestureDetector(
             onTap: () => _removeImage(index),
             child: Container(
-              padding: const EdgeInsets.all(3),
+              padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
                 color: Colors.redAccent,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                ],
               ),
-              child: const Icon(Icons.close, size: 14, color: Colors.white),
+              child: const Icon(Icons.close_rounded, size: 12, color: Colors.white),
             ),
           ),
         ),
       ],
     );
   }
-
+  
   // =============================================
-  // WIDGET: CHIP KONDISI BARANG
+  // WIDGET: CHIP KONDISI BARANG (SEGMENTED CONTROL STYLE)
   // =============================================
   Widget _buildConditionChip(String label, IconData icon) {
     bool isSelected = selectedCondition == label;
@@ -483,15 +541,18 @@ class _SellItemPageState extends State<SellItemPage> {
       child: GestureDetector(
         onTap: () => setState(() => selectedCondition = label),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF1A2235) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            gradient: isSelected ? AppTheme.primaryGradient : null,
+            color: isSelected ? null : AppTheme.bgLight,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isSelected
+                ? AppTheme.glowShadow(color: AppTheme.primaryBlue)
+                : null,
             border: Border.all(
-              color: isSelected
-                  ? const Color(0xFF1A2235)
-                  : Colors.grey.shade300,
+              color: isSelected ? Colors.transparent : Colors.transparent,
+              width: 1.5,
             ),
           ),
           child: Row(
@@ -499,16 +560,16 @@ class _SellItemPageState extends State<SellItemPage> {
             children: [
               Icon(
                 icon,
-                size: 20,
-                color: isSelected ? Colors.white : const Color(0xFF1A2235),
+                size: 18,
+                color: isSelected ? Colors.white : AppTheme.secondaryBlue,
               ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: isSelected ? Colors.white : Colors.black87,
+                  fontSize: 13,
+                  color: isSelected ? Colors.white : AppTheme.secondaryBlue,
                 ),
               ),
             ],
@@ -517,14 +578,17 @@ class _SellItemPageState extends State<SellItemPage> {
       ),
     );
   }
-
+  
   Widget _buildInputLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+      child: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.darkNavy),
+      ),
     );
   }
-
+  
   Widget _buildTextField(
     String hint,
     TextEditingController controller, {
@@ -537,29 +601,30 @@ class _SellItemPageState extends State<SellItemPage> {
       maxLines: maxLines,
       keyboardType: keyboardType,
       inputFormatters: formatters,
+      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
       decoration: InputDecoration(
         hintText: hint,
+        hintStyle: const TextStyle(color: Colors.grey, fontWeight: FontWeight.normal),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppTheme.bgLight,
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1A2235), width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.transparent),
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
 }
 
-// ====================================================================
-// --- CLASS CUSTOM FORMATTER UNTUK OTOMATISASI RP DAN TITIK RIBUAN ---
-// ====================================================================
+// Custom currency formatter tetap di bawah
 class CurrencyInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -570,7 +635,6 @@ class CurrencyInputFormatter extends TextInputFormatter {
       return newValue.copyWith(text: '');
     }
 
-    // Hapus semua karakter yang bukan angka agar perhitungan bersih
     String cleaned = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (cleaned.isEmpty) {
@@ -580,12 +644,10 @@ class CurrencyInputFormatter extends TextInputFormatter {
       );
     }
 
-    // Ubah string angka menjadi susunan list karakter
     final chars = cleaned.split('');
     String formatted = '';
     int count = 0;
 
-    // Looping mundur untuk menyisipkan titik setiap 3 digit angka
     for (int i = chars.length - 1; i >= 0; i--) {
       formatted = chars[i] + formatted;
       count++;
@@ -594,7 +656,6 @@ class CurrencyInputFormatter extends TextInputFormatter {
       }
     }
 
-    // Gabungkan dengan awalan Rp
     formatted = 'Rp $formatted';
 
     return TextEditingValue(

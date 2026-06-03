@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:reusea/utils/theme.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -19,19 +21,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   late TextEditingController _nameController;
   late TextEditingController _emailController;
+  late TextEditingController _facultyController;
 
   Uint8List? _imageBytes; // Menampung data foto baru dalam bentuk byte
   bool _isLoading = false;
 
-  late TextEditingController _facultyController;
-
   @override
   void initState() {
     super.initState();
-    // Mengambil data akun yang sedang login saat ini
     final user = _auth.currentUser;
-    String currentName =
-        user?.displayName ?? (user?.email?.split('@')[0] ?? 'Budi Santoso');
+    String currentName = user?.displayName ?? (user?.email?.split('@')[0] ?? 'Budi Santoso');
     String currentEmail = user?.email ?? 'budi.21001@mhs.unesa.ac.id';
 
     _nameController = TextEditingController(text: currentName);
@@ -74,9 +73,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Gagal mengambil foto: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal mengambil foto: $e", style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -85,9 +88,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _saveChanges() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Nama tidak boleh kosong!"),
-          backgroundColor: Colors.orangeAccent,
+        SnackBar(
+          content: Text("Nama tidak boleh kosong!", style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
+          backgroundColor: AppTheme.sunsetOrange,
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
@@ -102,21 +106,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
         String downloadUrl = user.photoURL ?? '';
 
-        // 2. Jika user memilih foto baru, upload ke Firebase Storage
+        // 2. Upload foto baru jika ada perubahan
         if (_imageBytes != null) {
-          Reference ref = _storage
-              .ref()
-              .child('profile_pictures')
-              .child('${user.uid}.jpg');
-          await ref.putData(_imageBytes!);
-          downloadUrl = await ref.getDownloadURL();
+          final storageRef = _storage.ref().child('user_photos/${user.uid}.jpg');
+          final uploadTask = storageRef.putData(
+            _imageBytes!,
+            SettableMetadata(contentType: 'image/jpeg'),
+          );
+          final snapshot = await uploadTask;
+          downloadUrl = await snapshot.ref.getDownloadURL();
           await user.updatePhotoURL(downloadUrl);
         }
 
-        // Segarkan data sesi user
-        await user.reload();
-
-        // 3. SINKRONISASI LIVE: Simpan ke Firestore koleksi 'users' agar halaman detail bisa sinkron
+        // 3. Update data di Firestore agar sinkron dengan yang lain
         await _firestore.collection('users').doc(user.uid).set({
           'uid': user.uid,
           'name': _nameController.text.trim(),
@@ -126,11 +128,48 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
+        // 4. Update data seller pada chat rooms
+        final chatRoomsBuyerQuery = await _firestore
+            .collection('chats')
+            .where('buyerId', isEqualTo: user.uid)
+            .get();
+        for (var doc in chatRoomsBuyerQuery.docs) {
+          await doc.reference.update({
+            'buyerName': _nameController.text.trim(),
+            'buyerPhoto': downloadUrl,
+          });
+        }
+
+        final chatRoomsSellerQuery = await _firestore
+            .collection('chats')
+            .where('sellerId', isEqualTo: user.uid)
+            .get();
+        for (var doc in chatRoomsSellerQuery.docs) {
+          await doc.reference.update({
+            'sellerName': _nameController.text.trim(),
+            'sellerPhoto': downloadUrl,
+          });
+        }
+
+        // 5. Update data seller pada barang jualan yang aktif
+        final productsQuery = await _firestore
+            .collection('products')
+            .where('sellerId', isEqualTo: user.uid)
+            .get();
+        for (var doc in productsQuery.docs) {
+          await doc.reference.update({
+            'sellerName': _nameController.text.trim(),
+            'sellerPhoto': downloadUrl,
+          });
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Profil berhasil diperbarui!"),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: Text("Profil berhasil diperbarui!", style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
+              backgroundColor: AppTheme.ecoTeal,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             ),
           );
           Navigator.pop(context); // Kembali ke halaman Profile
@@ -139,7 +178,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } finally {
@@ -152,228 +195,256 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final currentUser = _auth.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F1EE),
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.black,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Profile Picture Section - Bisa diklik untuk ganti foto
-              GestureDetector(
-                onTap: _pickImage,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 110,
-                      height: 110,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFF2F1EE),
-                          width: 5,
+      body: OceanGradientBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Back button & title Row
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: AppTheme.softShadow(),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: AppTheme.darkNavy,
+                            size: 18,
+                          ),
+                          onPressed: () => Navigator.pop(context),
                         ),
                       ),
-                      child: ClipOval(
-                        child: _imageBytes != null
-                            ? Image.memory(_imageBytes!, fit: BoxFit.cover)
-                            : (currentUser?.photoURL != null
-                                  ? Image.network(
-                                      currentUser!.photoURL!,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : const CircleAvatar(
-                                      backgroundColor: Color(0xFFF0F0F0),
-                                      child: Icon(
-                                        Icons.person,
-                                        size: 50,
-                                        color: Colors.grey,
-                                      ),
-                                    )),
+                      const SizedBox(width: 16),
+                      Text(
+                        'Edit Profile',
+                        style: GoogleFonts.lexend(
+                          color: AppTheme.darkNavy,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Profile Picture Section
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppTheme.oceanWaveGradient,
+                          ),
+                          child: CircleAvatar(
+                            radius: 54,
+                            backgroundColor: Colors.white,
+                            child: ClipOval(
+                              child: SizedBox(
+                                width: 104,
+                                height: 104,
+                                child: _imageBytes != null
+                                    ? Image.memory(_imageBytes!, fit: BoxFit.cover)
+                                    : (currentUser?.photoURL != null
+                                        ? Image.network(currentUser!.photoURL!, fit: BoxFit.cover)
+                                        : const Icon(Icons.person_rounded, size: 54, color: AppTheme.secondaryBlue)),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Floating camera badge
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: AppTheme.primaryGradient,
+                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Text(
+                      'Ubah Foto Profil',
+                      style: GoogleFonts.lexend(
+                        color: AppTheme.primaryBlue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: _pickImage,
-                child: const Text(
-                  'Change Profile Picture',
-                  style: TextStyle(
-                    color: Color(0xFF1A2235),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
                   ),
-                ),
-              ),
+                  const SizedBox(height: 32),
 
-              const SizedBox(height: 40),
-
-              // Full Name TextField
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'FULL NAME',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
+                  // Form Fields
+                  _buildInputField(
+                    label: "NAMA LENGKAP",
                     controller: _nameController,
-                    decoration: const InputDecoration(
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFFEEEEEE)),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF1A2235)),
-                      ),
-                    ),
+                    hint: "Masukkan nama lengkap Anda",
                   ),
-                ],
-              ),
+                  const SizedBox(height: 20),
 
-              const SizedBox(height: 25),
-
-              // Faculty / Jurusan TextField
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'FAKULTAS / JURUSAN',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
+                  _buildInputField(
+                    label: "FAKULTAS / JURUSAN",
                     controller: _facultyController,
-                    decoration: const InputDecoration(
-                      hintText: "Contoh: Fakultas Teknik / S1 Informatika",
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFFEEEEEE)),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF1A2235)),
-                      ),
-                    ),
+                    hint: "Contoh: Fakultas Teknik / S1 Informatika",
                   ),
-                ],
-              ),
+                  const SizedBox(height: 20),
 
-              const SizedBox(height: 25),
-
-              // Email TextField (READ ONLY Tetap Terkunci)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'EMAIL ADDRESS',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
+                  _buildInputField(
+                    label: "ALAMAT EMAIL (Terkunci)",
                     controller: _emailController,
-                    readOnly: true, // Terkunci aman
-                    style: const TextStyle(color: Colors.grey),
-                    decoration: const InputDecoration(
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFFEEEEEE)),
+                    hint: "",
+                    readOnly: true,
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Action Buttons
+                  Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: AppTheme.glowShadow(color: AppTheme.primaryBlue),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveChanges,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFFEEEEEE)),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'Simpan Perubahan',
+                              style: GoogleFonts.lexend(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: AppTheme.lightBlueGrey.withValues(alpha: 0.4), width: 1.5),
+                        ),
+                      ),
+                      child: Text(
+                        'Batalkan',
+                        style: GoogleFonts.lexend(
+                          color: AppTheme.secondaryBlue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 50),
-
-              // Buttons Section
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveChanges,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A2235),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Save Changes',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                  child: const Text(
-                    'Discard Changes',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInputField({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    bool readOnly = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+          child: Text(
+            label,
+            style: GoogleFonts.lexend(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.secondaryBlue,
+              letterSpacing: 1.0,
+            ),
+          ),
+        ),
+        TextField(
+          controller: controller,
+          readOnly: readOnly,
+          style: GoogleFonts.lexend(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: readOnly ? AppTheme.secondaryBlue : AppTheme.darkNavy,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.lexend(color: AppTheme.lightBlueGrey, fontWeight: FontWeight.normal),
+            filled: true,
+            fillColor: readOnly ? AppTheme.bgLight.withValues(alpha: 0.5) : Colors.white,
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: readOnly ? Colors.transparent : AppTheme.primaryBlue,
+                width: 1.5,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: readOnly ? Colors.transparent : AppTheme.primaryBlue.withValues(alpha: 0.05),
+                width: 1.5,
+              ),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
     );
   }
 }

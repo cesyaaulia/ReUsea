@@ -14,6 +14,7 @@ class Product {
   final String sellerName;
   final String sellerPhoto;
   final String condition; // Kondisi barang: "Baru" atau "Bekas"
+  final String status; // Status barang: "Available", "Processing", "Completed", "Draft"
 
   Product({
     required this.id,
@@ -29,6 +30,7 @@ class Product {
     required this.sellerName,
     required this.sellerPhoto,
     required this.condition,
+    required this.status,
   });
 
   factory Product.fromMap(Map<String, dynamic> map) {
@@ -60,6 +62,7 @@ class Product {
       sellerName: map['sellerName'] ?? 'Mahasiswa UNESA',
       sellerPhoto: map['sellerPhoto'] ?? '',
       condition: map['condition'] ?? 'Bekas', // Default "Bekas" untuk produk lama
+      status: map['status'] ?? 'Available',
     );
   }
 

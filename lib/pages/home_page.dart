@@ -7,7 +7,6 @@ import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/theme.dart';
 import '../models/product_model.dart';
 import 'detail_page.dart';
-import 'notification_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -60,7 +59,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final String currentDisplayName = FirebaseAuth.instance.currentUser?.displayName ?? 'Cesya';
 
     return Scaffold(
@@ -566,148 +564,148 @@ class _HomePageState extends State<HomePage> {
     final bool isWishlisted = _wishlistedIds.contains(product.id);
     final conditionColor = product.condition == 'Baru' ? AppTheme.ecoTeal : AppTheme.sunsetOrange;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppTheme.softShadow(),
-        border: Border.all(
-          color: AppTheme.primaryBlue.withValues(alpha: 0.04),
-          width: 1,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          HeroFadeRoute(page: DetailPage(product: product)),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: AppTheme.softShadow(),
+          border: Border.all(
+            color: AppTheme.primaryBlue.withValues(alpha: 0.04),
+            width: 1,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image block
-          Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    child: product.imagePath.startsWith('http')
-                        ? Image.network(product.imagePath, fit: BoxFit.cover)
-                        : Image.asset(
-                            product.imagePath.isNotEmpty ? product.imagePath : 'assets/images/profile_placeholder.png',
-                            fit: BoxFit.cover,
-                          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image block
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      child: product.imagePath.startsWith('http')
+                          ? Image.network(product.imagePath, fit: BoxFit.cover)
+                          : Image.asset(
+                              product.imagePath.isNotEmpty ? product.imagePath : 'assets/images/profile_placeholder.png',
+                              fit: BoxFit.cover,
+                            ),
+                    ),
                   ),
-                ),
-                // Wishlist Floating Button 🤍
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        if (isWishlisted) {
-                          _wishlistedIds.remove(product.id);
-                        } else {
-                          _wishlistedIds.add(product.id);
-                        }
-                      });
-                    },
-                    child: CircleAvatar(
-                      radius: 15,
-                      backgroundColor: Colors.white.withValues(alpha: 0.85),
-                      child: Icon(
-                        isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                        color: isWishlisted ? Colors.redAccent : AppTheme.secondaryBlue,
-                        size: 16,
+                  // Wishlist Floating Button 🤍
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isWishlisted) {
+                            _wishlistedIds.remove(product.id);
+                          } else {
+                            _wishlistedIds.add(product.id);
+                          }
+                        });
+                      },
+                      child: CircleAvatar(
+                        radius: 15,
+                        backgroundColor: Colors.white.withValues(alpha: 0.85),
+                        child: Icon(
+                          isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: isWishlisted ? Colors.redAccent : AppTheme.secondaryBlue,
+                          size: 16,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                // Condition Badge
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: conditionColor,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      product.condition,
-                      style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Detail block
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Category + Rating
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  // Condition Badge
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(6),
+                        color: conditionColor,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        product.category,
-                        style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 8, fontWeight: FontWeight.w800),
+                        product.condition,
+                        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    // Seller rating ⭐
-                    const Row(
-                      children: [
-                        Icon(Icons.star_rounded, color: AppTheme.sunYellow, size: 11),
-                        SizedBox(width: 2),
-                        Text(
-                          "4.8",
-                          style: TextStyle(color: AppTheme.darkNavy, fontSize: 9, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+  
+            // Detail block
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category + Rating
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                // Product Name
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      HeroFadeRoute(page: DetailPage(product: product)),
-                    );
-                  },
-                  child: Text(
+                        child: Text(
+                          product.category,
+                          style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 8, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      // Seller rating ⭐
+                      const Row(
+                        children: [
+                          Icon(Icons.star_rounded, color: AppTheme.sunYellow, size: 11),
+                          SizedBox(width: 2),
+                          Text(
+                            "4.8",
+                            style: TextStyle(color: AppTheme.darkNavy, fontSize: 9, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // Product Name
+                  Text(
                     product.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppTheme.darkNavy),
                   ),
-                ),
-                const SizedBox(height: 4),
-                // Price & Time
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      product.price,
-                      style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                    Text(
-                      product.time,
-                      style: TextStyle(color: AppTheme.secondaryBlue.withValues(alpha: 0.5), fontSize: 8),
-                    ),
-                  ],
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  // Price & Time
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        product.price,
+                        style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      Text(
+                        product.time,
+                        style: TextStyle(color: AppTheme.secondaryBlue.withValues(alpha: 0.5), fontSize: 8),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

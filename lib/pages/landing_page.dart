@@ -75,6 +75,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
               children: [
                 _buildHeroSection(context, isMobile, screenWidth),
                 _buildWaveTransition(AppTheme.primaryGradient.colors[1], Colors.white),
+                _buildAboutSection(isMobile),
                 _buildHowItWorksSection(isMobile),
                 _buildWaveTransition(Colors.white, AppTheme.bgLight, inverted: true),
                 _buildBenefitsSection(isMobile),
@@ -140,11 +141,11 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
             if (!isMobile)
               Row(
                 children: [
-                  _buildNavLink('How It Works', () => _scrollToSection(_howItWorksKey)),
-                  _buildNavLink('Benefits', () => _scrollToSection(_benefitsKey)),
-                  _buildNavLink('Categories', () => _scrollToSection(_categoriesKey)),
-                  _buildNavLink('Impact', () => _scrollToSection(_impactKey)),
-                  _buildNavLink('Testimonials', () => _scrollToSection(_testimonialsKey)),
+                  _buildNavLink('Cara Kerja', () => _scrollToSection(_howItWorksKey)),
+                  _buildNavLink('Kenapa ReUsea', () => _scrollToSection(_benefitsKey)),
+                  _buildNavLink('Kategori', () => _scrollToSection(_categoriesKey)),
+                  _buildNavLink('Dampak', () => _scrollToSection(_impactKey)),
+                  _buildNavLink('Ulasan', () => _scrollToSection(_testimonialsKey)),
                 ],
               ),
 
@@ -167,7 +168,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                 ),
               ),
               child: Text(
-                'Sign In',
+                'Masuk',
                 style: GoogleFonts.lexend(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -346,12 +347,12 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                     end: Alignment.bottomCenter,
                   ).createShader(bounds),
                   child: Text(
-                    "Give Things a Second Life",
+                    "Jual Beli Barang Preloved Mahasiswa dengan Lebih Aman",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.lexend(
-                      fontSize: isMobile ? 38 : 64,
+                      fontSize: isMobile ? 32 : 56,
                       fontWeight: FontWeight.w900,
-                      height: 1.1,
+                      height: 1.15,
                       letterSpacing: -1.5,
                       color: Colors.white,
                     ),
@@ -361,15 +362,15 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
 
                 // 3. Subheadline
                 Container(
-                  constraints: const BoxConstraints(maxWidth: 680),
+                  constraints: const BoxConstraints(maxWidth: 720),
                   child: Text(
-                    "Buy and sell preloved items within your university community. Save money, reduce waste, and support sustainability.",
+                    "Temukan barang bekas berkualitas dari sesama mahasiswa, jual barang yang sudah tidak terpakai, dan bantu kurangi limbah dengan cara yang lebih mudah.",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.lexend(
                       fontSize: isMobile ? 15 : 18,
                       fontWeight: FontWeight.w400,
                       color: Colors.white.withValues(alpha: 0.85),
-                      height: 1.5,
+                      height: 1.6,
                     ),
                   ),
                 ),
@@ -403,7 +404,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Get Started',
+                            'Mulai Sekarang',
                             style: GoogleFonts.lexend(
                               fontWeight: FontWeight.bold,
                               fontSize: isMobile ? 15 : 16,
@@ -434,7 +435,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                         ),
                       ),
                       child: Text(
-                        'Explore Marketplace',
+                        'Jelajahi Barang',
                         style: GoogleFonts.lexend(
                           fontWeight: FontWeight.bold,
                           fontSize: isMobile ? 15 : 16,
@@ -455,6 +456,64 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
     );
   }
 
+  Widget _buildAboutSection(bool isMobile) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: AppTheme.radiusXL,
+            boxShadow: AppTheme.softShadow(color: AppTheme.primaryBlue),
+            border: Border.all(color: AppTheme.lightBlueGrey.withValues(alpha: 0.15), width: 1.5),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Text(
+                  "TENTANG REUSEA",
+                  style: GoogleFonts.lexend(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                    letterSpacing: 2.0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "Apa itu ReUsea?",
+                style: GoogleFonts.lexend(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.darkNavy,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "ReUsea adalah marketplace preloved khusus mahasiswa yang membantu pengguna menjual, membeli, dan menemukan barang bekas layak pakai di lingkungan kampus.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.lexend(
+                  fontSize: 16,
+                  color: AppTheme.secondaryBlue,
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ============================================================================
   // HOW IT WORKS SECTION
   // ============================================================================
@@ -466,9 +525,9 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
       child: Column(
         children: [
           _buildSectionHeader(
-            category: "PROCESS",
-            title: "How It Works",
-            subtitle: "Start your circular economy journey in 3 simple steps",
+            category: "PROSES",
+            title: "Cara Kerja",
+            subtitle: "Mulai perjalanan circular economy kamu hanya dalam 3 langkah mudah",
           ),
           const SizedBox(height: 60),
           LayoutBuilder(
@@ -478,24 +537,24 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                   children: [
                     _buildStepCard(
                       step: "01",
-                      title: "Upload Your Item",
-                      description: "Snap photos, set your student-friendly price, and add a brief description of your preloved item.",
+                      title: "Upload Barang",
+                      description: "Tambahkan foto, nama barang, harga, kondisi, dan lokasi pengambilan.",
                       icon: Icons.camera_enhance_rounded,
                       color: AppTheme.coralPeach,
                     ),
                     const SizedBox(height: 32),
                     _buildStepCard(
                       step: "02",
-                      title: "Find Interested Students",
-                      description: "Chat securely with other university students on campus. Negotiate prices and arrange a meeting spot.",
+                      title: "Chat dengan Pembeli",
+                      description: "Diskusikan detail barang dan kesepakatan transaksi langsung melalui chat.",
                       icon: Icons.forum_rounded,
                       color: AppTheme.aquaTurquoise,
                     ),
                     const SizedBox(height: 32),
                     _buildStepCard(
                       step: "03",
-                      title: "Complete The Transaction",
-                      description: "Meet up safely at designated campus areas (like Ketintang/Lidah Wetan) and hand over the item.",
+                      title: "Selesaikan Transaksi",
+                      description: "Konfirmasi transaksi setelah barang diterima dan berikan rating kepada seller.",
                       icon: Icons.handshake_rounded,
                       color: AppTheme.sunYellow,
                     ),
@@ -509,8 +568,8 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                     Expanded(
                       child: _buildStepCard(
                         step: "01",
-                        title: "Upload Your Item",
-                        description: "Snap photos, set your student-friendly price, and add a brief description of your preloved item.",
+                        title: "Upload Barang",
+                        description: "Tambahkan foto, nama barang, harga, kondisi, dan lokasi pengambilan.",
                         icon: Icons.camera_enhance_rounded,
                         color: AppTheme.coralPeach,
                       ),
@@ -519,8 +578,8 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                     Expanded(
                       child: _buildStepCard(
                         step: "02",
-                        title: "Find Interested Students",
-                        description: "Chat securely with other university students on campus. Negotiate prices and arrange a meeting spot.",
+                        title: "Chat dengan Pembeli",
+                        description: "Diskusikan detail barang dan kesepakatan transaksi langsung melalui chat.",
                         icon: Icons.forum_rounded,
                         color: AppTheme.aquaTurquoise,
                       ),
@@ -529,8 +588,8 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                     Expanded(
                       child: _buildStepCard(
                         step: "03",
-                        title: "Complete The Transaction",
-                        description: "Meet up safely at designated campus areas (like Ketintang/Lidah Wetan) and hand over the item.",
+                        title: "Selesaikan Transaksi",
+                        description: "Konfirmasi transaksi setelah barang diterima dan berikan rating kepada seller.",
                         icon: Icons.handshake_rounded,
                         color: AppTheme.sunYellow,
                       ),
@@ -622,9 +681,9 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
       child: Column(
         children: [
           _buildSectionHeader(
-            category: "BENEFITS",
-            title: "Built For University Life",
-            subtitle: "Solve local waste, support each other, and enjoy a sustainable lifestyle",
+            category: "MANFAAT",
+            title: "Kenapa ReUsea?",
+            subtitle: "Didesain khusus untuk memudahkan kehidupan perkuliahan mahasiswa",
           ),
           const SizedBox(height: 60),
           LayoutBuilder(
@@ -634,29 +693,29 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                   children: [
                     _buildBenefitItem(
                       icon: Icons.savings_rounded,
-                      title: "Save Money",
-                      description: "Buy textbooks, gadgets, and furniture at a fraction of their retail price. Perfect for student budgets.",
+                      title: "Hemat Biaya",
+                      description: "Dapatkan barang kebutuhan kuliah dengan harga lebih terjangkau.",
                       color: AppTheme.sunYellow,
                     ),
                     const SizedBox(height: 24),
                     _buildBenefitItem(
-                      icon: Icons.delete_sweep_rounded,
-                      title: "Reduce Waste",
-                      description: "Prevent functioning items from reaching local landfills. Keep the resource loop circular and active.",
+                      icon: Icons.verified_user_rounded,
+                      title: "Lebih Aman",
+                      description: "Lihat rating seller dan riwayat transaksi sebelum membeli barang.",
                       color: AppTheme.ecoTeal,
                     ),
                     const SizedBox(height: 24),
                     _buildBenefitItem(
                       icon: Icons.eco_rounded,
-                      title: "Support Sustainability",
-                      description: "Contribute to building a green campus. Every reused item lowers the carbon footprint of production.",
+                      title: "Ramah Lingkungan",
+                      description: "Beri kesempatan kedua untuk barang yang masih layak pakai.",
                       color: AppTheme.aquaTurquoise,
                     ),
                     const SizedBox(height: 24),
                     _buildBenefitItem(
                       icon: Icons.school_rounded,
-                      title: "Help Fellow Students",
-                      description: "Make university transition smoother for juniors by passing down your study and living essentials.",
+                      title: "Khusus Mahasiswa",
+                      description: "Dibuat untuk memudahkan transaksi antar mahasiswa di lingkungan kampus.",
                       color: AppTheme.coralPeach,
                     ),
                   ],
@@ -672,26 +731,26 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                   children: [
                     _buildBenefitItem(
                       icon: Icons.savings_rounded,
-                      title: "Save Money",
-                      description: "Buy textbooks, gadgets, and furniture at a fraction of their retail price. Perfect for student budgets.",
+                      title: "Hemat Biaya",
+                      description: "Dapatkan barang kebutuhan kuliah dengan harga lebih terjangkau.",
                       color: AppTheme.sunYellow,
                     ),
                     _buildBenefitItem(
-                      icon: Icons.delete_sweep_rounded,
-                      title: "Reduce Waste",
-                      description: "Prevent functioning items from reaching local landfills. Keep the resource loop circular and active.",
+                      icon: Icons.verified_user_rounded,
+                      title: "Lebih Aman",
+                      description: "Lihat rating seller dan riwayat transaksi sebelum membeli barang.",
                       color: AppTheme.ecoTeal,
                     ),
                     _buildBenefitItem(
                       icon: Icons.eco_rounded,
-                      title: "Support Sustainability",
-                      description: "Contribute to building a green campus. Every reused item lowers the carbon footprint of production.",
+                      title: "Ramah Lingkungan",
+                      description: "Beri kesempatan kedua untuk barang yang masih layak pakai.",
                       color: AppTheme.aquaTurquoise,
                     ),
                     _buildBenefitItem(
                       icon: Icons.school_rounded,
-                      title: "Help Fellow Students",
-                      description: "Make university transition smoother for juniors by passing down your study and living essentials.",
+                      title: "Khusus Mahasiswa",
+                      description: "Dibuat untuk memudahkan transaksi antar mahasiswa di lingkungan kampus.",
                       color: AppTheme.coralPeach,
                     ),
                   ],
@@ -768,39 +827,39 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
   Widget _buildCategoriesSection(bool isMobile) {
     final List<Map<String, dynamic>> categoriesList = [
       {
-        "title": "Books & Notes",
+        "title": "Buku",
         "emoji": "📚",
-        "desc": "Textbooks, course guides, novels",
+        "desc": "Buku kuliah, novel, diktat referensi",
         "gradient": const LinearGradient(colors: [Color(0xFF6C5CE7), Color(0xFFA8A4FF)]),
       },
       {
-        "title": "Electronics",
+        "title": "Elektronik",
         "emoji": "💻",
-        "desc": "Laptops, phones, accessories",
+        "desc": "Laptop, handphone, aksesoris, charger",
         "gradient": const LinearGradient(colors: [Color(0xFF0984E3), Color(0xFF74B9FF)]),
       },
       {
         "title": "Fashion",
         "emoji": "👕",
-        "desc": "Jackets, shirts, varsity wear",
+        "desc": "Jaket, kemeja, sepatu, tas kampus",
         "gradient": const LinearGradient(colors: [Color(0xFFFD79A8), Color(0xFFFFABE7)]),
       },
       {
-        "title": "Sports Gear",
+        "title": "Olahraga",
         "emoji": "⚽",
-        "desc": "Rackets, jerseys, gym equipment",
+        "desc": "Raket, bola, sepatu olahraga, jersey",
         "gradient": const LinearGradient(colors: [Color(0xFF00B894), Color(0xFF55EFC4)]),
       },
       {
-        "title": "Furniture",
-        "emoji": "🛋",
-        "desc": "Study chairs, desks, drawers",
+        "title": "Peralatan",
+        "emoji": "🛠",
+        "desc": "Kipas angin, dispenser, alat tulis, perkakas",
         "gradient": const LinearGradient(colors: [Color(0xFFE17055), Color(0xFFFFB894)]),
       },
       {
-        "title": "Essentials",
+        "title": "Kebutuhan Harian",
         "emoji": "🎒",
-        "desc": "Bags, fans, daily tools",
+        "desc": "Peralatan mandi, deterjen, hiasan kamar",
         "gradient": const LinearGradient(colors: [Color(0xFFF1C40F), Color(0xFFFFEAA7)]),
       },
     ];
@@ -812,9 +871,9 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
       child: Column(
         children: [
           _buildSectionHeader(
-            category: "CATEGORIES",
-            title: "Explore What Students Sell",
-            subtitle: "Categorized beautifully with premium 3D cards. Hover to tilt!",
+            category: "KATEGORI",
+            title: "Kategori Barang",
+            subtitle: "Temukan berbagai macam kategori barang preloved yang kamu butuhkan",
           ),
           const SizedBox(height: 60),
           LayoutBuilder(
@@ -899,9 +958,9 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
       child: Column(
         children: [
           _buildSectionHeader(
-            category: "OUR FOOTPRINT",
-            title: "Campus Sustainability Impact",
-            subtitle: "Together we have made a measurable difference in our UNESA environment",
+            category: "DAMPAK KAMPUS",
+            title: "Bersama ReUsea, Barang Lama Bisa Punya Cerita Baru",
+            subtitle: "Langkah kecil kita bersama membantu menjaga lingkungan UNESA tetap hijau dan lestari",
             lightMode: false,
           ),
           const SizedBox(height: 60),
@@ -914,24 +973,31 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                       icon: Icons.loop_rounded,
                       value: 1248,
                       suffix: "+",
-                      label: "Items Reused",
+                      label: "Barang digunakan kembali",
                       color: AppTheme.aquaTurquoise,
+                    ),
+                    const SizedBox(height: 48),
+                    _buildStatWidget(
+                      icon: Icons.handshake_rounded,
+                      value: 850,
+                      suffix: "+",
+                      label: "Transaksi mahasiswa",
+                      color: AppTheme.coralPeach,
                     ),
                     const SizedBox(height: 48),
                     _buildStatWidget(
                       icon: Icons.eco_rounded,
                       value: 2496,
                       suffix: " kg",
-                      label: "Carbon Saved",
+                      label: "Potensi limbah berkurang",
                       color: AppTheme.ecoTeal,
                     ),
                     const SizedBox(height: 48),
                     _buildStatWidget(
-                      icon: Icons.savings_rounded,
-                      value: 450,
-                      prefix: "Rp ",
-                      suffix: "M+",
-                      label: "Student Savings",
+                      icon: Icons.people_rounded,
+                      value: 1500,
+                      suffix: "+",
+                      label: "Pengguna aktif",
                       color: AppTheme.sunYellow,
                     ),
                   ],
@@ -945,8 +1011,17 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                         icon: Icons.loop_rounded,
                         value: 1248,
                         suffix: "+",
-                        label: "Items Reused",
+                        label: "Barang digunakan kembali",
                         color: AppTheme.aquaTurquoise,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildStatWidget(
+                        icon: Icons.handshake_rounded,
+                        value: 850,
+                        suffix: "+",
+                        label: "Transaksi mahasiswa",
+                        color: AppTheme.coralPeach,
                       ),
                     ),
                     Expanded(
@@ -954,17 +1029,16 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                         icon: Icons.eco_rounded,
                         value: 2496,
                         suffix: " kg",
-                        label: "Carbon Saved",
+                        label: "Potensi limbah berkurang",
                         color: AppTheme.ecoTeal,
                       ),
                     ),
                     Expanded(
                       child: _buildStatWidget(
-                        icon: Icons.savings_rounded,
-                        value: 45, // 45 Juta
-                        prefix: "Rp ",
-                        suffix: "M+",
-                        label: "Student Savings",
+                        icon: Icons.people_rounded,
+                        value: 1500,
+                        suffix: "+",
+                        label: "Pengguna aktif",
                         color: AppTheme.sunYellow,
                       ),
                     ),
@@ -1051,21 +1125,21 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
       {
         "name": "Cesya Aulia",
         "faculty": "Fakultas Teknik, UNESA",
-        "review": "ReUsea helps me find cheap reference books and calculators. It's incredibly easy to chat and meet seniors on campus Lidah Wetan!",
+        "review": "ReUsea sangat membantuku menemukan buku referensi dan kalkulator murah. Mudah sekali untuk chat dan ketemuan langsung dengan kakak tingkat di kampus Lidah Wetan!",
         "rating": 5,
         "color": AppTheme.aquaTurquoise,
       },
       {
         "name": "Siswanto",
         "faculty": "Fakultas Ilmu Sosial, UNESA",
-        "review": "I sold my old electric fan and textbook within 2 days of uploading. Saving carbon feels real when you see it on the impact page!",
+        "review": "Kipas angin bekas dan buku kuliahku laku dalam 2 hari setelah di-upload. Dampak pengurangan limbah karbon jadi terasa nyata ketika melihat halaman statistik!",
         "rating": 5,
         "color": AppTheme.coralPeach,
       },
       {
         "name": "Budi Raharjo",
         "faculty": "Fakultas Bahasa & Seni, UNESA",
-        "review": "Awesome UI design! The glassmorphism and maps feature makes dealing preloved sports gear on campus feel like a premium startup experience.",
+        "review": "Desain UI-nya keren banget! Fitur glassmorphism dan peta bikin transaksi barang olahraga bekas di kampus terasa seperti aplikasi startup premium.",
         "rating": 5,
         "color": AppTheme.sunYellow,
       },
@@ -1078,9 +1152,35 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
       child: Column(
         children: [
           _buildSectionHeader(
-            category: "TESTIMONIALS",
-            title: "What UNESA Students Say",
-            subtitle: "Real stories from fellow campus peers using ReUsea to buy and sell",
+            category: "TRUST SYSTEM",
+            title: "Pilih Seller dengan Lebih Percaya",
+            subtitle: "Setiap seller memiliki rating dari transaksi yang sudah selesai, sehingga pembeli bisa melihat reputasi seller sebelum membeli barang.",
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                ElegantFadeRoute(page: const LoginPage()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shadowColor: AppTheme.primaryBlue.withValues(alpha: 0.3),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Text(
+              "Cari Barang Sekarang",
+              style: GoogleFonts.lexend(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
           ),
           const SizedBox(height: 60),
           LayoutBuilder(
@@ -1235,7 +1335,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
                 style: GoogleFonts.lexend(fontSize: 12, color: Colors.white38),
               ),
               Text(
-                'Built with 💙 for UNESA Campus Community',
+                'Dibuat dengan 💙 untuk Komunitas Kampus UNESA',
                 style: GoogleFonts.lexend(fontSize: 12, color: Colors.white38),
               ),
             ],
@@ -1269,7 +1369,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
         ),
         const SizedBox(height: 20),
         Text(
-          'Universitas Negeri Surabaya Sustainability Initiative.\nEmpowering students to build circular eco-friendly communities.',
+          'Marketplace preloved mahasiswa untuk jual beli barang bekas yang lebih aman, hemat, dan ramah lingkungan.',
           style: GoogleFonts.lexend(fontSize: 13, color: Colors.white60, height: 1.6),
         ),
       ],
@@ -1281,14 +1381,14 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quick Links',
+          'Tautan Cepat',
           style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         const SizedBox(height: 16),
-        _buildFooterLink('How It Works', () => _scrollToSection(_howItWorksKey)),
-        _buildFooterLink('Benefits', () => _scrollToSection(_benefitsKey)),
-        _buildFooterLink('Categories', () => _scrollToSection(_categoriesKey)),
-        _buildFooterLink('Sustainability Impact', () => _scrollToSection(_impactKey)),
+        _buildFooterLink('Beranda', () => _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut)),
+        _buildFooterLink('Tentang', () => _scrollToSection(_howItWorksKey)),
+        _buildFooterLink('Kategori', () => _scrollToSection(_categoriesKey)),
+        _buildFooterLink('Kontak', () => _scrollToSection(_testimonialsKey)),
       ],
     );
   }
@@ -1311,7 +1411,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'University Branding',
+          'Kampus',
           style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         const SizedBox(height: 16),
