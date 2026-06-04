@@ -104,7 +104,7 @@ class ProfilePage extends StatelessWidget {
                               icon: const Icon(Icons.settings_outlined, color: AppTheme.darkNavy),
                               onPressed: () => Navigator.push(
                                 context,
-                                FadeScaleRoute(page: const SettingsPage()),
+                                FadeScaleRoute(page: SettingsPage()),
                               ),
                             ),
                           ),

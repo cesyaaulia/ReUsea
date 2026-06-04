@@ -16,7 +16,10 @@ import 'landing_page.dart';
 import 'incoming_orders_page.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+  SettingsPage({super.key});
+
+  final ValueNotifier<bool> _isDeveloperMode = ValueNotifier<bool>(false);
+  final ValueNotifier<int> _devClickCount = ValueNotifier<int>(0);
 
   void _showAboutAppDialog(BuildContext context) {
     showDialog(
@@ -603,36 +606,58 @@ class SettingsPage extends StatelessWidget {
 
                   // =================== SECTION: APLIKASI ===================
                   _buildSectionHeader("APLIKASI"),
-                  _buildSettingsGroup([
-                    _buildSettingsTile(
-                      icon: Icons.info_outline_rounded,
-                      title: 'Tentang ReUsea',
-                      bgIconColor: AppTheme.secondaryBlue.withValues(alpha: 0.1),
-                      iconColor: AppTheme.secondaryBlue,
-                      onTap: () => _showAboutAppDialog(context),
-                    ),
-                    _buildSettingsTile(
-                      icon: Icons.privacy_tip_outlined,
-                      title: 'Kebijakan Privasi',
-                      bgIconColor: Colors.blueGrey.withValues(alpha: 0.1),
-                      iconColor: Colors.blueGrey,
-                      onTap: () => _showPrivacyPolicy(context),
-                    ),
-                    _buildSettingsTile(
-                      icon: Icons.gavel_outlined,
-                      title: 'Syarat & Ketentuan',
-                      bgIconColor: Colors.brown.withValues(alpha: 0.1),
-                      iconColor: Colors.brown,
-                      onTap: () => _showTermsAndConditions(context),
-                    ),
-                    _buildSettingsTile(
-                      icon: Icons.cloud_upload_outlined,
-                      title: 'Seed Dummy Products',
-                      bgIconColor: AppTheme.ecoTeal.withValues(alpha: 0.1),
-                      iconColor: AppTheme.ecoTeal,
-                      onTap: () => _showSeedDialog(context),
-                    ),
-                  ]),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isDeveloperMode,
+                    builder: (context, isDev, child) {
+                      return _buildSettingsGroup([
+                        _buildSettingsTile(
+                          icon: Icons.info_outline_rounded,
+                          title: 'Tentang ReUsea',
+                          bgIconColor: AppTheme.secondaryBlue.withValues(alpha: 0.1),
+                          iconColor: AppTheme.secondaryBlue,
+                          onTap: () {
+                            _showAboutAppDialog(context);
+                            _devClickCount.value++;
+                            if (_devClickCount.value >= 7 && !_isDeveloperMode.value) {
+                              _isDeveloperMode.value = true;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "Mode Developer Aktif!",
+                                    style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
+                                  ),
+                                  backgroundColor: AppTheme.primaryBlue,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        _buildSettingsTile(
+                          icon: Icons.privacy_tip_outlined,
+                          title: 'Kebijakan Privasi',
+                          bgIconColor: Colors.blueGrey.withValues(alpha: 0.1),
+                          iconColor: Colors.blueGrey,
+                          onTap: () => _showPrivacyPolicy(context),
+                        ),
+                        _buildSettingsTile(
+                          icon: Icons.gavel_outlined,
+                          title: 'Syarat & Ketentuan',
+                          bgIconColor: Colors.brown.withValues(alpha: 0.1),
+                          iconColor: Colors.brown,
+                          onTap: () => _showTermsAndConditions(context),
+                        ),
+                        if (isDev)
+                          _buildSettingsTile(
+                            icon: Icons.cloud_upload_outlined,
+                            title: 'Seed Dummy Products',
+                            bgIconColor: AppTheme.ecoTeal.withValues(alpha: 0.1),
+                            iconColor: AppTheme.ecoTeal,
+                            onTap: () => _showSeedDialog(context),
+                          ),
+                      ]);
+                    },
+                  ),
                   const SizedBox(height: 24),
 
                   // =================== SECTION: AKSI AKUN ===================

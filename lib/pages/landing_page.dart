@@ -1613,208 +1613,113 @@ class FloatingHeroIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double illustrationWidth = isMobile ? 320 : 750;
-    final double illustrationHeight = isMobile ? 360 : 380;
+    final List<Map<String, dynamic>> items = [
+      {
+        "label": "Books",
+        "emoji": "📚",
+        "tag": "Lidah Wetan",
+        "color": AppTheme.coralPeach,
+      },
+      {
+        "label": "Electronics",
+        "emoji": "💻",
+        "tag": "Ketintang",
+        "color": AppTheme.aquaTurquoise,
+      },
+      {
+        "label": "Fashion",
+        "emoji": "👟",
+        "tag": "-60%",
+        "color": AppTheme.sunsetOrange,
+      },
+      {
+        "label": "Sports Gear",
+        "emoji": "⚽",
+        "tag": "Preloved",
+        "color": AppTheme.ecoTeal,
+      },
+      {
+        "label": "Furniture",
+        "emoji": "🪑",
+        "tag": "UNESA",
+        "color": AppTheme.sunYellow,
+      },
+    ];
+
+    final double cardWidth = isMobile ? 140 : 135;
 
     return Container(
-      width: illustrationWidth,
-      height: illustrationHeight,
-      margin: const EdgeInsets.only(top: 20),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background Vector Waves Painter
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: SizedBox(
-              height: 180,
-              child: CustomPaint(
-                painter: OceanWavesGraphicPainter(),
-              ),
-            ),
-          ),
-
-          // 5 Floating 3D-styled cards (Wrapped correctly in Positioned to avoid layout assertions)
-          // 1. Books (📚)
-          Positioned(
-            left: isMobile ? 20 : 80,
-            top: isMobile ? 120 : 50,
-            child: Floating3DCard(
-              label: "Books",
-              emoji: "📚",
-              tag: "Lidah Wetan",
-              color: AppTheme.coralPeach,
-              waveShift: 0.0,
-            ),
-          ),
-          // 2. Laptop (💻)
-          Positioned(
-            left: isMobile ? 180 : 210,
-            top: isMobile ? 60 : 20,
-            child: Floating3DCard(
-              label: "Electronics",
-              emoji: "💻",
-              tag: "Ketintang",
-              color: AppTheme.aquaTurquoise,
-              waveShift: 1.2,
-            ),
-          ),
-          // 3. Fashion (👕)
-          Positioned(
-            left: isMobile ? 100 : 360,
-            top: isMobile ? 220 : 90,
-            child: Floating3DCard(
-              label: "Fashion",
-              emoji: "👟",
-              tag: "-60%",
-              color: AppTheme.sunsetOrange,
-              waveShift: 2.4,
-            ),
-          ),
-          // 4. Sports (⚽)
-          Positioned(
-            left: isMobile ? 30 : 500,
-            top: isMobile ? 40 : 40,
-            child: Floating3DCard(
-              label: "Sports Gear",
-              emoji: "⚽",
-              tag: "Preloved",
-              color: AppTheme.ecoTeal,
-              waveShift: 3.6,
-            ),
-          ),
-          // 5. Furniture (🛋)
-          Positioned(
-            left: isMobile ? 210 : 620,
-            top: isMobile ? 180 : 80,
-            child: Floating3DCard(
-              label: "Furniture",
-              emoji: "🪑",
-              tag: "UNESA",
-              color: AppTheme.sunYellow,
-              waveShift: 4.8,
-            ),
-          ),
-        ],
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 30, bottom: 20),
+      child: Wrap(
+        spacing: isMobile ? 12 : 16,
+        runSpacing: isMobile ? 12 : 16,
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: items.map((item) => _buildStaticCard(item, cardWidth)).toList(),
       ),
     );
   }
-}
 
-// ============================================================================
-// WIDGET: INDIVIDUAL 3D FLOATING CARD WITH SHADOW AND SIN-WAVE MOVEMENT
-// ============================================================================
-class Floating3DCard extends StatefulWidget {
-  final String label;
-  final String emoji;
-  final String tag;
-  final Color color;
-  final double waveShift;
-
-  const Floating3DCard({
-    super.key,
-    required this.label,
-    required this.emoji,
-    required this.tag,
-    required this.color,
-    required this.waveShift,
-  });
-
-  @override
-  State<Floating3DCard> createState() => _Floating3DCardState();
-}
-
-class _Floating3DCardState extends State<Floating3DCard> with SingleTickerProviderStateMixin {
-  late AnimationController _floatController;
-
-  @override
-  void initState() {
-    super.initState();
-    _floatController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _floatController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _floatController,
-      builder: (context, child) {
-        // Calculate smooth wave offset using cosine
-        double floatOffset = math.sin((_floatController.value * 2 * math.pi) + widget.waveShift) * 12.0;
-
-        return Transform.translate(
-          offset: Offset(0, floatOffset),
-          child: TiltCard(
-            child: Container(
-              width: 120,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.color.withValues(alpha: 0.15),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
+  Widget _buildStaticCard(Map<String, dynamic> item, double width) {
+    final Color color = item['color'];
+    return TiltCard(
+      child: Container(
+        width: width,
+        height: isMobile ? 125 : 120,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  item['tag'],
+                  style: GoogleFonts.lexend(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: color,
                   ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Floating Tag Badge
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: widget.color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        widget.tag,
-                        style: GoogleFonts.lexend(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: widget.color,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Huge Emoji
-                  Text(widget.emoji, style: const TextStyle(fontSize: 36)),
-                  const SizedBox(height: 8),
-                  // Label
-                  Text(
-                    widget.label,
-                    style: GoogleFonts.lexend(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.darkNavy,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+            Text(item['emoji'], style: const TextStyle(fontSize: 28)),
+            Text(
+              item['label'],
+              textAlign: TextAlign.center,
+              style: GoogleFonts.lexend(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.darkNavy,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
