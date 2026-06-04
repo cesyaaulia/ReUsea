@@ -145,7 +145,9 @@ class _SellItemPageState extends State<SellItemPage> {
     try {
       final XFile? image = await picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 70,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 50,
       );
 
       if (image != null) {

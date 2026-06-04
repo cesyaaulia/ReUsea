@@ -320,7 +320,7 @@ class DatabaseService {
         'deliveryService': deliveryService,
         'deliveryFee': deliveryFee,
         'distanceKm': distanceKm,
-        'status': 'Processing',
+        'status': 'Waiting Confirmation',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -331,9 +331,9 @@ class DatabaseService {
 
       await createNotification(
         receiverId: sellerId,
-        title: 'Produk Anda Terjual! 🎉',
+        title: 'Pesanan Masuk! 🛍️',
         message:
-            '$buyerName telah membeli "$name" Anda seharga $price. Pengiriman via $deliveryService. Segera cek detail transaksi Anda!',
+            '$buyerName telah memesan "$name" Anda seharga $price. Segera konfirmasi pesanan ini!',
       );
 
       onSuccess();
@@ -369,13 +369,21 @@ class DatabaseService {
       String productId = orderData['productId'] ?? '';
       String buyerId = orderData['buyerId'] ?? '';
       String sellerId = orderData['sellerId'] ?? '';
+      String name = orderData['name'] ?? '';
+      String sellerName = orderData['sellerName'] ?? 'Penjual';
 
       await _db.collection('orders').doc(orderId).update({
         'status': newStatus,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      if (newStatus == 'Completed') {
+      if (newStatus == 'Processing') {
+        await createNotification(
+          receiverId: buyerId,
+          title: 'Pesanan Dikonfirmasi! 📦',
+          message: 'Pesanan Anda untuk "$name" telah dikonfirmasi oleh $sellerName. Silakan lakukan COD.',
+        );
+      } else if (newStatus == 'Completed') {
         // Hapus permanen dari koleksi products beranda
         if (productId.isNotEmpty) {
           await _db.collection('products').doc(productId).update({
@@ -394,6 +402,17 @@ class DatabaseService {
             'solds': FieldValue.increment(1),
           });
         }
+        
+        await createNotification(
+          receiverId: buyerId,
+          title: 'Transaksi Selesai! 🎉',
+          message: 'Transaksi untuk "$name" telah selesai. Terima kasih telah menggunakan ReUsea!',
+        );
+        await createNotification(
+          receiverId: sellerId,
+          title: 'Transaksi Terjual! 🎉',
+          message: 'Barang "$name" Anda telah berhasil terjual. Nilai reputasi Anda bertambah!',
+        );
       } else if (newStatus == 'Cancelled') {
         // Jika batal, kembalikan status produk menjadi Available agar mejeng lagi di Home
         if (productId.isNotEmpty) {
@@ -401,6 +420,12 @@ class DatabaseService {
             'status': 'Available',
           });
         }
+
+        await createNotification(
+          receiverId: buyerId,
+          title: 'Pesanan Dibatalkan ❌',
+          message: 'Pesanan Anda untuk "$name" telah dibatalkan.',
+        );
       }
     } catch (e) {
       throw 'Gagal memperbarui status transaksi: $e';

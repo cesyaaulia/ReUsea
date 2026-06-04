@@ -50,17 +50,17 @@ class AppTheme {
   // Soft Premium Shadows
   static List<BoxShadow> softShadow({Color? color}) => [
         BoxShadow(
-          color: (color ?? Colors.black).withValues(alpha: 0.05),
-          blurRadius: 20,
-          offset: const Offset(0, 10),
+          color: (color ?? Colors.black).withValues(alpha: 0.03),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
         ),
       ];
 
   static List<BoxShadow> glowShadow({required Color color}) => [
         BoxShadow(
-          color: color.withValues(alpha: 0.25),
-          blurRadius: 15,
-          offset: const Offset(0, 6),
+          color: color.withValues(alpha: 0.15),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
         ),
       ];
 
@@ -101,35 +101,18 @@ class GlassContainer extends StatelessWidget {
       width: width,
       height: height,
       margin: margin,
+      padding: padding,
       decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: opacity * 1.2),
+        borderRadius: BorderRadius.circular(radius),
+        border: border ??
+            Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
         boxShadow: AppTheme.softShadow(color: const Color(0xFF1A2295)),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withValues(alpha: opacity),
-                  Colors.white.withValues(alpha: opacity * 0.4),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(radius),
-              border: border ??
-                  Border.all(
-                    color: Colors.white.withValues(alpha: 0.4),
-                    width: 1.5,
-                  ),
-            ),
-            child: child,
-          ),
-        ),
-      ),
+      child: child,
     );
   }
 }

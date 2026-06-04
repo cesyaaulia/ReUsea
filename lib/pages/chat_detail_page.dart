@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import '../models/product_model.dart';
@@ -105,7 +106,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     try {
       final XFile? file = await picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 70,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 50,
       );
       if (file == null) return;
 
@@ -232,7 +235,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               radius: 18,
               backgroundColor: AppTheme.bgLight,
               backgroundImage: widget.peerPhoto.isNotEmpty && widget.peerPhoto.startsWith('http')
-                  ? NetworkImage(widget.peerPhoto)
+                  ? CachedNetworkImageProvider(widget.peerPhoto)
                   : null,
               child: widget.peerPhoto.isEmpty || !widget.peerPhoto.startsWith('http')
                   ? const Icon(Icons.person_rounded, size: 20, color: AppTheme.secondaryBlue)
@@ -369,7 +372,24 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               width: 55,
               height: 55,
               child: imageToShow.startsWith('http')
-                  ? Image.network(imageToShow, fit: BoxFit.cover)
+                  ? CachedNetworkImage(
+                      imageUrl: imageToShow,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: AppTheme.bgLight,
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                    )
                   : Image.asset('assets/images/profile_placeholder.png', fit: BoxFit.cover),
             ),
           ),
@@ -563,37 +583,27 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       },
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          imageUrl,
+                        child: CachedNetworkImage(
+                          imageUrl: imageUrl,
                           width: 220,
                           height: 220,
                           fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              width: 220,
-                              height: 220,
-                              color: Colors.grey[100],
-                              child: const Center(
-                                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 220,
-                              height: 220,
-                              color: Colors.grey[100],
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.broken_image_rounded, color: Colors.grey, size: 40),
-                                  SizedBox(height: 8),
-                                  Text("Gagal memuat gambar", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                ],
-                              ),
-                            );
-                          },
+                          placeholder: (context, url) => Container(
+                            width: 220,
+                            height: 220,
+                            color: Colors.grey[100],
+                            child: const Center(
+                              child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            width: 220,
+                            height: 220,
+                            color: Colors.grey[100],
+                            child: const Center(
+                              child: Icon(Icons.broken_image, color: Colors.grey),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -768,10 +778,13 @@ class ChatImagePreviewDialog extends StatelessWidget {
             boundaryMargin: const EdgeInsets.all(20),
             minScale: 0.5,
             maxScale: 4,
-            child: Image.network(
-              imageUrl,
+            child: CachedNetworkImage(
+              imageUrl: imageUrl,
               fit: BoxFit.contain,
-              errorBuilder: (c, e, s) => const Icon(Icons.broken_image, size: 64, color: Colors.white),
+              placeholder: (context, url) => const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+              errorWidget: (context, url, error) => const Icon(Icons.broken_image, size: 64, color: Colors.white),
             ),
           ),
           Positioned(

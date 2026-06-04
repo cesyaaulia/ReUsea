@@ -9,6 +9,7 @@ import '../models/product_model.dart';
 import 'chat_detail_page.dart';
 import 'checkout_page.dart';
 import 'seller_profile_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class DetailPage extends StatefulWidget {
   final Product product;
@@ -171,9 +172,22 @@ class _DetailPageState extends State<DetailPage> {
                             });
                           },
                           itemBuilder: (context, index) {
-                            String url = imageUrls[index];
+                            final String url = imageUrls[index];
                             return url.startsWith('http')
-                                ? Image.network(url, fit: BoxFit.cover)
+                                ? CachedNetworkImage(
+                                    imageUrl: url,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(
+                                      color: AppTheme.bgLight,
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppTheme.primaryBlue,
+                                        ),
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                                  )
                                 : Image.asset(
                                     url.isNotEmpty ? url : 'assets/images/profile_placeholder.png',
                                     fit: BoxFit.cover,
@@ -181,7 +195,20 @@ class _DetailPageState extends State<DetailPage> {
                           },
                         )
                       : mainImagePath.startsWith('http')
-                          ? Image.network(mainImagePath, fit: BoxFit.cover)
+                          ? CachedNetworkImage(
+                              imageUrl: mainImagePath,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: AppTheme.bgLight,
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.primaryBlue,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                            )
                           : Image.asset(
                               mainImagePath.isNotEmpty ? mainImagePath : 'assets/images/profile_placeholder.png',
                               fit: BoxFit.cover,
@@ -669,7 +696,7 @@ class _DetailPageState extends State<DetailPage> {
                                       CircleAvatar(
                                         radius: 28,
                                         backgroundColor: AppTheme.bgLight,
-                                        backgroundImage: sPhoto.isNotEmpty ? NetworkImage(sPhoto) : null,
+                                        backgroundImage: sPhoto.isNotEmpty ? CachedNetworkImageProvider(sPhoto) : null,
                                         child: sPhoto.isEmpty ? const Icon(Icons.person_rounded, color: AppTheme.secondaryBlue) : null,
                                       ),
                                       const SizedBox(width: 14),
@@ -833,7 +860,25 @@ class _DetailPageState extends State<DetailPage> {
                                             child: ClipRRect(
                                               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                                               child: prod.imagePath.startsWith('http')
-                                                  ? Image.network(prod.imagePath, fit: BoxFit.cover, width: double.infinity)
+                                                  ? CachedNetworkImage(
+                                                      imageUrl: prod.imagePath,
+                                                      fit: BoxFit.cover,
+                                                      width: double.infinity,
+                                                      placeholder: (context, url) => Container(
+                                                        color: AppTheme.bgLight,
+                                                        child: const Center(
+                                                          child: SizedBox(
+                                                            width: 20,
+                                                            height: 20,
+                                                            child: CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                              color: AppTheme.primaryBlue,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                                                    )
                                                   : Image.asset(
                                                       prod.imagePath.isNotEmpty ? prod.imagePath : 'assets/images/profile_placeholder.png',
                                                       fit: BoxFit.cover,

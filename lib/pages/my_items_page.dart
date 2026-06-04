@@ -8,6 +8,7 @@ import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/pages/edit_items_page.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class MyItemsPage extends StatefulWidget {
   const MyItemsPage({super.key});
@@ -138,13 +139,14 @@ class _MyItemsPageState extends State<MyItemsPage> {
                       boxShadow: AppTheme.softShadow(),
                     ),
                     child: TabBar(
+                      indicatorSize: TabBarIndicatorSize.tab,
                       dividerColor: Colors.transparent,
                       indicator: BoxDecoration(
                         gradient: AppTheme.primaryGradient,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       labelColor: Colors.white,
-                      unselectedLabelColor: AppTheme.secondaryBlue,
+                      unselectedLabelColor: Colors.grey,
                       labelStyle: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 13),
                       unselectedLabelStyle: GoogleFonts.lexend(fontWeight: FontWeight.w600, fontSize: 13),
                       tabs: const [
@@ -287,7 +289,24 @@ class _MyItemsPageState extends State<MyItemsPage> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: product.imagePath.startsWith('http')
-                      ? Image.network(product.imagePath, fit: BoxFit.cover)
+                      ? CachedNetworkImage(
+                          imageUrl: product.imagePath,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: AppTheme.bgLight,
+                            child: const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppTheme.primaryBlue,
+                                ),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                        )
                       : Image.asset(
                           product.imagePath.isNotEmpty ? product.imagePath : 'assets/images/profile_placeholder.png',
                           fit: BoxFit.cover,

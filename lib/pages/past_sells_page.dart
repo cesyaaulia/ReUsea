@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'sale_detail_page.dart';
 
 class PastSellsPage extends StatefulWidget {
@@ -142,7 +143,7 @@ class _PastSellsPageState extends State<PastSellsPage> with SingleTickerProvider
                       controller: _tabController,
                       children: [
                         _buildSaleList(context, allItems),
-                        _buildSaleList(context, allItems.where((i) => i['status'] == 'Processing').toList()),
+                        _buildSaleList(context, allItems.where((i) => i['status'] == 'Processing' || i['status'] == 'Waiting Confirmation').toList()),
                         _buildSaleList(context, allItems.where((i) => i['status'] == 'Completed').toList()),
                         _buildSaleList(context, allItems.where((i) => i['status'] == 'Cancelled').toList()),
                       ],
@@ -207,6 +208,9 @@ class _PastSellsPageState extends State<PastSellsPage> with SingleTickerProvider
     } else if (status == 'Cancelled') {
       badgeColor = AppTheme.coralPeach;
       statusIndo = "Batal";
+    } else if (status == 'Waiting Confirmation') {
+      badgeColor = AppTheme.primaryBlue;
+      statusIndo = "Menunggu Konfirmasi";
     } else {
       badgeColor = AppTheme.sunsetOrange;
       statusIndo = "Diproses";
@@ -245,7 +249,24 @@ class _PastSellsPageState extends State<PastSellsPage> with SingleTickerProvider
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: item['imagePath'] != null && item['imagePath'].startsWith('http')
-                      ? Image.network(item['imagePath'], fit: BoxFit.cover)
+                      ? CachedNetworkImage(
+                          imageUrl: item['imagePath'],
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: AppTheme.bgLight,
+                            child: const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppTheme.primaryBlue,
+                                ),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                        )
                       : Image.asset(
                           item['imagePath'] != null && item['imagePath'].isNotEmpty
                               ? item['imagePath']

@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -102,7 +103,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final XFile? image = await picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 70,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 50,
       );
       if (image != null) {
         var bytes = await image.readAsBytes();
@@ -371,7 +374,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 child: _imageBytes != null
                                     ? Image.memory(_imageBytes!, fit: BoxFit.cover)
                                     : (currentUser?.photoURL != null
-                                        ? Image.network(currentUser!.photoURL!, fit: BoxFit.cover)
+                                        ? CachedNetworkImage(
+                                            imageUrl: currentUser!.photoURL!,
+                                            fit: BoxFit.cover,
+                                            placeholder: (context, url) => Container(
+                                              color: AppTheme.bgLight,
+                                              child: const Center(
+                                                child: SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: AppTheme.primaryBlue,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                                          )
                                         : const Icon(Icons.person_rounded, size: 54, color: AppTheme.secondaryBlue)),
                               ),
                             ),

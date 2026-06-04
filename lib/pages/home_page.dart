@@ -8,9 +8,12 @@ import 'package:reusea/utils/theme.dart';
 import '../models/product_model.dart';
 import 'detail_page.dart';
 import 'cart_page.dart';
+import 'notification_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback? onProfileTap;
+  const HomePage({super.key, this.onProfileTap});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -88,124 +91,141 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  int _parsePrice(String priceStr) {
+    String cleaned = priceStr.replaceAll('Rp', '').replaceAll('.', '').replaceAll(' ', '').trim();
+    return int.tryParse(cleaned) ?? 0;
+  }
+
+  String _formatSavings(int totalAmount) {
+    if (totalAmount >= 1000000) {
+      double millions = totalAmount / 1000000.0;
+      String formatted = millions.toStringAsFixed(millions % 1 == 0 ? 0 : 1);
+      return 'Rp ${formatted}Jt';
+    } else if (totalAmount >= 1000) {
+      double thousands = totalAmount / 1000.0;
+      String formatted = thousands.toStringAsFixed(thousands % 1 == 0 ? 0 : 1);
+      return 'Rp ${formatted}K';
+    } else {
+      return 'Rp $totalAmount';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final String currentDisplayName = FirebaseAuth.instance.currentUser?.displayName ?? 'Cesya';
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.userChanges(),
+      builder: (context, authSnapshot) {
+        final user = authSnapshot.data;
+        final String currentDisplayName = user?.displayName ?? 'Sobat ReUsea';
+        final String? photoUrl = user?.photoURL;
+        final String currentUserId = user?.uid ?? '';
 
-    return Scaffold(
-      backgroundColor: AppTheme.bgLight,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. TOP HERO SECTION WITH GREETINGS & IMPACT CARD
-            _buildHeroSection(currentDisplayName),
+        return Scaffold(
+          backgroundColor: AppTheme.bgLight,
+          body: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('products')
+                .orderBy('createdAt', descending: true)
+                .limit(30)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+                );
+              }
 
-            // 2. SEARCH BAR (Floating Glass Effect)
-            _buildSearchBar(),
+              var allDocs = snapshot.data?.docs ?? [];
+              
+              // Hide non-available items
+              var availableDocs = allDocs.where((doc) {
+                var data = doc.data() as Map<String, dynamic>;
+                String status = data['status'] ?? 'Available';
+                return status != 'Processing' && status != 'Completed';
+              }).toList();
 
-            // 3. FACULTY FILTER CHIPS (Horizontal Scroll)
-            _buildFacultyFilter(),
-
-            // 4. CATEGORIES ROW (Horizontal Scroll)
-            _buildCategoriesSection(),
-
-            // 5. FEATURED SECTION (Carousel Banner)
-            _buildFeaturedCarousel(),
-
-            // Stream Builder for fetching all products to distribute across sections
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('products')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(40.0),
-                      child: CircularProgressIndicator(color: AppTheme.primaryBlue),
-                    ),
-                  );
-                }
-
-                var allDocs = snapshot.data?.docs ?? [];
-                
-                // Hide non-available items
-                var availableDocs = allDocs.where((doc) {
-                  var data = doc.data() as Map<String, dynamic>;
-                  String status = data['status'] ?? 'Available';
-                  return status != 'Processing' && status != 'Completed';
+              // Filter by category
+              var filteredDocs = availableDocs;
+              if (_selectedCategory != "Semua") {
+                filteredDocs = availableDocs.where((doc) {
+                  return doc['category'].toString().toUpperCase() ==
+                      _selectedCategory.toUpperCase();
                 }).toList();
+              }
 
-                if (availableDocs.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: Center(
-                      child: Text(
-                        "Belum ada barang jualan hari ini.",
-                        style: TextStyle(color: AppTheme.secondaryBlue, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+              // Filter by search
+              if (_searchQuery.isNotEmpty) {
+                filteredDocs = filteredDocs.where((doc) {
+                  return doc['name'].toString().toLowerCase().contains(
+                    _searchQuery.toLowerCase(),
                   );
-                }
+                }).toList();
+              }
 
-                // Filter by category
-                var filteredDocs = availableDocs;
-                if (_selectedCategory != "Semua") {
-                  filteredDocs = availableDocs.where((doc) {
-                    return doc['category'].toString().toUpperCase() ==
-                        _selectedCategory.toUpperCase();
-                  }).toList();
-                }
+              // Filter by faculty
+              if (_selectedFaculty != "Semua Fakultas") {
+                filteredDocs = filteredDocs.where((doc) {
+                  var data = doc.data() as Map<String, dynamic>;
+                  String faculty = data['sellerFaculty'] ?? '';
+                  return faculty == _selectedFaculty;
+                }).toList();
+              }
 
-                // Filter by search
-                if (_searchQuery.isNotEmpty) {
-                  filteredDocs = filteredDocs.where((doc) {
-                    return doc['name'].toString().toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    );
-                  }).toList();
-                }
+              // Map to Product objects
+              List<Product> allProducts = availableDocs.map((d) => Product.fromMap(d.data() as Map<String, dynamic>)).toList();
+              List<Product> filteredProducts = filteredDocs.map((d) => Product.fromMap(d.data() as Map<String, dynamic>)).toList();
 
-                // Filter by faculty
-                if (_selectedFaculty != "Semua Fakultas") {
-                  filteredDocs = filteredDocs.where((doc) {
-                    var data = doc.data() as Map<String, dynamic>;
-                    String faculty = data['sellerFaculty'] ?? '';
-                    return faculty == _selectedFaculty;
-                  }).toList();
-                }
+              // Donation products
+              List<Product> donationProducts = allProducts.where((p) => p.productType == 'Donasi').toList();
 
-                // Map to Product objects
-                List<Product> allProducts = availableDocs.map((d) => Product.fromMap(d.data() as Map<String, dynamic>)).toList();
-                List<Product> filteredProducts = filteredDocs.map((d) => Product.fromMap(d.data() as Map<String, dynamic>)).toList();
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // 1. TOP HERO SECTION WITH GREETINGS & IMPACT CARD
+                  SliverToBoxAdapter(
+                    child: _buildHeroSection(currentDisplayName, photoUrl, currentUserId),
+                  ),
 
-                // Donation products
-                List<Product> donationProducts = allProducts.where((p) => p.productType == 'Donasi').toList();
+                  // 2. SEARCH BAR (Floating Glass Effect)
+                  SliverToBoxAdapter(
+                    child: _buildSearchBar(),
+                  ),
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 6. RECOMMENDED FOR YOU (Horizontal List)
-                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas")
-                      _buildHorizontalProductRow("🎯 Rekomendasi Untukmu", allProducts.take(4).toList()),
+                  // 3. FACULTY FILTER CHIPS (Horizontal Scroll)
+                  SliverToBoxAdapter(
+                    child: _buildFacultyFilter(),
+                  ),
 
-                    // 7. TRENDING NEAR CAMPUS 🔥 (Horizontal List)
-                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas")
-                      _buildTrendingSection(allProducts),
+                  // 4. CATEGORIES ROW (Horizontal Scroll)
+                  SliverToBoxAdapter(
+                    child: _buildCategoriesSection(),
+                  ),
 
-                    // 8. DONASI MAHASISWA 🎁 (Horizontal List)
-                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas" && donationProducts.isNotEmpty)
-                      _buildDonationSection(donationProducts),
+                  // 5. FEATURED SECTION (Carousel Banner)
+                  SliverToBoxAdapter(
+                    child: _buildFeaturedCarousel(),
+                  ),
 
-                    // 9. RECENTLY VIEWED (Horizontal List)
-                    if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas")
-                      _buildHorizontalProductRow("⏰ Terakhir Dilihat", allProducts.reversed.take(3).toList()),
+                  // Dynamic lists
+                  if (_selectedCategory == "Semua" && _searchQuery.isEmpty && _selectedFaculty == "Semua Fakultas") ...[
+                    SliverToBoxAdapter(
+                      child: _buildHorizontalProductRow("🎯 Rekomendasi Untukmu", allProducts.take(4).toList()),
+                    ),
+                    SliverToBoxAdapter(
+                      child: _buildTrendingSection(allProducts),
+                    ),
+                    if (donationProducts.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: _buildDonationSection(donationProducts),
+                      ),
+                    SliverToBoxAdapter(
+                      child: _buildHorizontalProductRow("⏰ Terakhir Dilihat", allProducts.reversed.take(3).toList()),
+                    ),
+                  ],
 
-                    // 10. NEWEST PRODUCTS (Masonry Grid)
-                    Padding(
+                  // Product list section title
+                  SliverToBoxAdapter(
+                    child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       child: Text(
                         _selectedCategory == "Semua" 
@@ -218,9 +238,24 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    
-                    if (filteredProducts.isEmpty)
-                      const Padding(
+                  ),
+
+                  // Product list / Empty state
+                  if (availableDocs.isEmpty)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: Center(
+                          child: Text(
+                            "Belum ada barang jualan hari ini.",
+                            style: TextStyle(color: AppTheme.secondaryBlue, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (filteredProducts.isEmpty)
+                    const SliverToBoxAdapter(
+                      child: Padding(
                         padding: EdgeInsets.symmetric(vertical: 30.0),
                         child: Center(
                           child: Text(
@@ -228,39 +263,37 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(color: AppTheme.secondaryBlue, fontWeight: FontWeight.bold),
                           ),
                         ),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
-                        child: GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: filteredProducts.length,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.65,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
-                          ),
-                          itemBuilder: (context, index) {
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.65,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
                             return _buildMasonryProductCard(filteredProducts[index]);
                           },
+                          childCount: filteredProducts.length,
                         ),
                       ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
   // WIDGET 1: HERO SECTION DENGAN GREETING & IMPACT CARD
-  Widget _buildHeroSection(String name) {
-    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
-
+  Widget _buildHeroSection(String name, String? photoUrl, String currentUserId) {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -271,82 +304,85 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting & Profile Avatar Row
+          // Logo + Actions Row (Row 1)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'Halo, $name 👋',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Sustainability Mascot badge 🐢
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white24,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text("🐢", style: TextStyle(fontSize: 12)),
-                              SizedBox(width: 4),
-                              Text(
-                                "Eco Buddy",
-                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      "Mari beri barang kesempatan kedua hari ini",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
+              // ReUsea Logo with subtle glow (on the top-left)
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.aquaTurquoise.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),
+                child: CustomPaint(
+                  painter: ReUseaLogoPainter(showBackground: true),
+                ),
               ),
-              const SizedBox(width: 8),
-              // Logo + Cart + Profile Avatar Row
+              // Notification + Cart + Profile Row
               Row(
                 children: [
-                  // ReUsea Logo with subtle glow
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.aquaTurquoise.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: CustomPaint(
-                      painter: ReUseaLogoPainter(showBackground: true),
-                    ),
+                  // Notification Icon with unread badge
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('notifications')
+                        .where('isRead', isEqualTo: false)
+                        .snapshots(),
+                    builder: (context, notifSnap) {
+                      int unreadCount = 0;
+                      if (notifSnap.hasData) {
+                        unreadCount = notifSnap.data!.docs.where((doc) {
+                          String receiverId = doc['receiverId'] ?? '';
+                          return receiverId == currentUserId || receiverId == 'ALL';
+                        }).length;
+                      }
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                SlideUpRoute(page: const NotificationPage()),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.2),
+                              ),
+                              child: const Icon(
+                                Icons.notifications_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                          if (unreadCount > 0)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 10,
+                                height: 10,
+                                decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(width: 12),
                   // Shopping Cart Icon with dynamic badge
@@ -408,42 +444,127 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                   const SizedBox(width: 12),
-                  // Profile Avatar
-                  Container(
-                    padding: const EdgeInsets.all(2.0),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppTheme.sunsetGradient,
-                    ),
-                    child: const CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person_rounded, color: AppTheme.primaryBlue, size: 20),
+                  // Clickable Profile Avatar
+                  GestureDetector(
+                    onTap: () {
+                      widget.onProfileTap?.call();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(2.0),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppTheme.sunsetGradient,
+                      ),
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.white,
+                        backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                            ? CachedNetworkImageProvider(photoUrl)
+                            : null,
+                        child: photoUrl == null || photoUrl.isEmpty
+                            ? const Icon(Icons.person_rounded, color: AppTheme.primaryBlue, size: 20)
+                            : null,
+                      ),
                     ),
                   ),
                 ],
               ),
             ],
           ),
+          const SizedBox(height: 20),
+
+          // Greetings & Mascots Section (Row 2)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  Text(
+                    'Halo, $name',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  // Sustainability Mascot badge 🐢
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white30, width: 1),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("🐢", style: TextStyle(fontSize: 14)),
+                        SizedBox(width: 5),
+                        Text(
+                          "Eco Buddy",
+                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "Mari beri barang kesempatan kedua hari ini",
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 28),
 
-          // IMPACT CARD (Glassmorphism)
-          GlassContainer(
-            radius: 24,
-            blur: 15,
-            opacity: 0.25,
-            border: Border.all(color: Colors.white24, width: 1.5),
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildImpactItem("♻", "1.258", "Barang Reused"),
-                _buildImpactDivider(),
-                _buildImpactItem("🌱", "340 Kg", "Limbah Berkurang"),
-                _buildImpactDivider(),
-                _buildImpactItem("💰", "Rp 125jt", "Hemat Mahasiswa"),
-              ],
-            ),
+          // IMPACT CARD (Glassmorphism, fully dynamic)
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('orders')
+                .where('status', isEqualTo: 'Completed')
+                .snapshots(),
+            builder: (context, orderSnapshot) {
+              int barangReused = 0;
+              int totalSavings = 0;
+              if (orderSnapshot.hasData) {
+                var docs = orderSnapshot.data!.docs;
+                barangReused = docs.length;
+                for (var doc in docs) {
+                  var data = doc.data() as Map<String, dynamic>;
+                  String priceStr = data['price'] ?? '0';
+                  totalSavings += _parsePrice(priceStr);
+                }
+              }
+
+              int limbahBerkurang = barangReused * 2;
+              String formattedSavings = _formatSavings(totalSavings);
+
+              return GlassContainer(
+                radius: 24,
+                blur: 15,
+                opacity: 0.25,
+                border: Border.all(color: Colors.white24, width: 1.5),
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildImpactItem("♻", "$barangReused", "Barang Reused"),
+                    _buildImpactDivider(),
+                    _buildImpactItem("🌱", "$limbahBerkurang Kg", "Limbah Berkurang"),
+                    _buildImpactDivider(),
+                    _buildImpactItem("💰", formattedSavings, "Hemat Mahasiswa"),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -595,7 +716,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // WIDGET 4: CATEGORIES Horizontal List
   Widget _buildCategoriesSection() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -618,7 +738,7 @@ class _HomePageState extends State<HomePage> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 margin: const EdgeInsets.only(right: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected ? color : Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -630,19 +750,13 @@ class _HomePageState extends State<HomePage> {
                     width: 1.5,
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Text(meta['icon'], style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 6),
-                    Text(
-                      catName,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : AppTheme.darkNavy,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  catName,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : AppTheme.darkNavy,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             );
@@ -949,7 +1063,24 @@ class _HomePageState extends State<HomePage> {
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                       child: product.imagePath.startsWith('http')
-                          ? Image.network(product.imagePath, fit: BoxFit.cover)
+                          ? CachedNetworkImage(
+                              imageUrl: product.imagePath,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: AppTheme.bgLight,
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppTheme.primaryBlue,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                            )
                           : Image.asset(
                               product.imagePath.isNotEmpty ? product.imagePath : 'assets/images/profile_placeholder.png',
                               fit: BoxFit.cover,

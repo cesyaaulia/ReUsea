@@ -6,6 +6,7 @@ import 'package:reusea/services/database_service.dart';
 import 'package:reusea/services/delivery_service.dart';
 import 'package:reusea/utils/theme.dart';
 import 'map_picker_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Halaman Checkout — Buyer memilih alamat pengiriman & jasa pengiriman / COD
 class CheckoutPage extends StatefulWidget {
@@ -729,8 +730,35 @@ class _CheckoutPageState extends State<CheckoutPage>
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: widget.product.imagePath.startsWith('http')
-                ? Image.network(
-                    widget.product.imagePath,
+                ? CachedNetworkImage(
+                    imageUrl: widget.product.imagePath,
+                    width: 85,
+                    height: 85,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      width: 85,
+                      height: 85,
+                      color: AppTheme.bgLight,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primaryBlue,
+                          ),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      width: 85,
+                      height: 85,
+                      color: const Color(0xFFF2F4F7),
+                      child: const Icon(Icons.broken_image_rounded, color: Colors.grey),
+                    ),
+                  )
+                : Image.asset(
+                    widget.product.imagePath.isNotEmpty ? widget.product.imagePath : 'assets/images/profile_placeholder.png',
                     width: 85,
                     height: 85,
                     fit: BoxFit.cover,
@@ -739,16 +767,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                       height: 85,
                       color: const Color(0xFFF2F4F7),
                       child: const Icon(Icons.broken_image_rounded, color: Colors.grey),
-                    ),
-                  )
-                : Container(
-                    width: 85,
-                    height: 85,
-                    color: const Color(0xFFF2F4F7),
-                    child: const Icon(
-                      Icons.shopping_bag_outlined,
-                      color: AppTheme.primaryBlue,
-                      size: 36,
                     ),
                   ),
           ),

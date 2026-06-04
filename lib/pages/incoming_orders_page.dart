@@ -6,16 +6,16 @@ import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/utils/theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'order_detail_page.dart';
+import 'sale_detail_page.dart';
 
-class PastBuysPage extends StatefulWidget {
-  const PastBuysPage({super.key});
+class IncomingOrdersPage extends StatefulWidget {
+  const IncomingOrdersPage({super.key});
 
   @override
-  State<PastBuysPage> createState() => _PastBuysPageState();
+  State<IncomingOrdersPage> createState() => _IncomingOrdersPageState();
 }
 
-class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderStateMixin {
+class _IncomingOrdersPageState extends State<IncomingOrdersPage> with SingleTickerProviderStateMixin {
   final DatabaseService _dbService = DatabaseService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late TabController _tabController;
@@ -65,7 +65,7 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
                     ),
                     const SizedBox(width: 16),
                     Text(
-                      'Riwayat Pembelian',
+                      'Pesanan Masuk',
                       style: GoogleFonts.lexend(
                         color: AppTheme.darkNavy,
                         fontSize: 24,
@@ -95,11 +95,11 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
                       borderRadius: BorderRadius.circular(14),
                     ),
                     labelColor: Colors.white,
-                    unselectedLabelColor: AppTheme.secondaryBlue,
+                    unselectedLabelColor: Colors.grey,
                     labelStyle: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 11),
                     unselectedLabelStyle: GoogleFonts.lexend(fontWeight: FontWeight.w500, fontSize: 11),
                     tabs: const [
-                      Tab(text: "Semua"),
+                      Tab(text: "Menunggu"),
                       Tab(text: "Diproses"),
                       Tab(text: "Selesai"),
                       Tab(text: "Batal"),
@@ -111,7 +111,7 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
               // Expanded tab views
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: _dbService.getPastBuysStream(currentUserId),
+                  stream: _dbService.getPastSellsStream(currentUserId),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
@@ -142,10 +142,10 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
                     return TabBarView(
                       controller: _tabController,
                       children: [
-                        _buildOrderList(context, allItems),
-                        _buildOrderList(context, allItems.where((i) => i['status'] == 'Processing' || i['status'] == 'Waiting Confirmation').toList()),
-                        _buildOrderList(context, allItems.where((i) => i['status'] == 'Completed').toList()),
-                        _buildOrderList(context, allItems.where((i) => i['status'] == 'Cancelled').toList()),
+                        _buildSaleList(context, allItems.where((i) => i['status'] == 'Waiting Confirmation').toList(), "Belum ada pesanan menunggu konfirmasi."),
+                        _buildSaleList(context, allItems.where((i) => i['status'] == 'Processing').toList(), "Belum ada pesanan yang sedang diproses."),
+                        _buildSaleList(context, allItems.where((i) => i['status'] == 'Completed').toList(), "Belum ada pesanan yang telah selesai."),
+                        _buildSaleList(context, allItems.where((i) => i['status'] == 'Cancelled').toList(), "Belum ada pesanan yang dibatalkan."),
                       ],
                     );
                   },
@@ -158,16 +158,16 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildOrderList(BuildContext context, List<Map<String, dynamic>> items) {
+  Widget _buildSaleList(BuildContext context, List<Map<String, dynamic>> items, String emptyMessage) {
     if (items.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("🛍️", style: TextStyle(fontSize: 48)),
+            const Text("📥", style: TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
             Text(
-              "Belum ada transaksi di sini.",
+              emptyMessage,
               style: GoogleFonts.lexend(
                 color: AppTheme.secondaryBlue,
                 fontWeight: FontWeight.bold,
@@ -176,7 +176,7 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
             ),
             const SizedBox(height: 4),
             Text(
-              "Yuk belanja barang preloved UNESA sekarang!",
+              "Pantau terus pesanan masuk dari pembeli Anda!",
               style: GoogleFonts.lexend(
                 color: AppTheme.lightBlueGrey,
                 fontSize: 12,
@@ -192,13 +192,13 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
       physics: const BouncingScrollPhysics(),
       itemCount: items.length,
       itemBuilder: (context, index) {
-        return _buildOrderCard(context, items[index]);
+        return _buildSaleCard(context, items[index]);
       },
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, Map<String, dynamic> item) {
-    final String status = item['status'] ?? 'Processing';
+  Widget _buildSaleCard(BuildContext context, Map<String, dynamic> item) {
+    final String status = item['status'] ?? 'Waiting Confirmation';
 
     Color badgeColor;
     String statusIndo;
@@ -230,7 +230,7 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
           Navigator.push(
             context,
             SlideFadeRightRoute(
-              page: OrderDetailPage(orderData: item),
+              page: SaleDetailPage(saleData: item),
             ),
           );
         },
@@ -335,7 +335,7 @@ class _PastBuysPageState extends State<PastBuysPage> with SingleTickerProviderSt
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            'Penjual: ${item['sellerName'] ?? 'Mahasiswa UNESA'}',
+                            'Pembeli: ${item['buyerName'] ?? 'Mahasiswa UNESA'}',
                             style: GoogleFonts.lexend(
                               fontSize: 11,
                               color: AppTheme.secondaryBlue,

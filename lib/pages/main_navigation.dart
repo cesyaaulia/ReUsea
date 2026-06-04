@@ -17,14 +17,25 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   int _previousIndex = 0;
+  late List<Widget> _pages;
 
-  // Halaman yang sesuai dengan navigasi (indeks: 0 -> Home, 1 -> Chat, 2 -> My Items, 3 -> Profile)
-  final List<Widget> _pages = [
-    const HomePage(),
-    const ChatPage(),
-    const MyItemsPage(),
-    const ProfilePage(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      HomePage(
+        onProfileTap: () {
+          setState(() {
+            _previousIndex = _selectedIndex;
+            _selectedIndex = 3;
+          });
+        },
+      ),
+      const ChatPage(),
+      const MyItemsPage(),
+      const ProfilePage(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,25 +159,8 @@ class AnimatedSellButton extends StatefulWidget {
   State<AnimatedSellButton> createState() => _AnimatedSellButtonState();
 }
 
-class _AnimatedSellButtonState extends State<AnimatedSellButton>
-    with SingleTickerProviderStateMixin {
+class _AnimatedSellButtonState extends State<AnimatedSellButton> {
   double _scale = 1.0;
-  late AnimationController _glowController;
-
-  @override
-  void initState() {
-    super.initState();
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _glowController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,41 +174,19 @@ class _AnimatedSellButtonState extends State<AnimatedSellButton>
       child: AnimatedScale(
         scale: _scale,
         duration: const Duration(milliseconds: 150),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Wave Glow Ripple Effect
-            AnimatedBuilder(
-              animation: _glowController,
-              builder: (context, child) {
-                return Container(
-                  width: 58 + (_glowController.value * 8),
-                  height: 58 + (_glowController.value * 8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.primaryBlue.withValues(
-                      alpha: 0.15 * (1.0 - _glowController.value),
-                    ),
-                  ),
-                );
-              },
-            ),
-            // Tombol Utama
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppTheme.primaryGradient,
-                boxShadow: AppTheme.glowShadow(color: AppTheme.primaryBlue),
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: Colors.white,
-                size: 26,
-              ),
-            ),
-          ],
+        child: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: AppTheme.primaryGradient,
+            boxShadow: AppTheme.glowShadow(color: AppTheme.primaryBlue),
+          ),
+          child: const Icon(
+            Icons.add_rounded,
+            color: Colors.white,
+            size: 26,
+          ),
         ),
       ),
     );

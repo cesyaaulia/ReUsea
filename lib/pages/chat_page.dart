@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'chat_detail_page.dart';
 
 class ChatPage extends StatefulWidget {
@@ -132,7 +133,7 @@ class _ChatPageState extends State<ChatPage> {
                         }
 
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return _buildMockChatList();
+                          return _buildEmptyState();
                         }
 
                         final rooms = snapshot.data!.docs;
@@ -203,160 +204,39 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildMockChatList() {
-    return ListView.separated(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
-      itemCount: _mockChats.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final chat = _mockChats[index];
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: AppTheme.softShadow(),
-            border: Border.all(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.04),
-              width: 1,
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "💬",
+              style: TextStyle(fontSize: 64),
             ),
-          ),
-          child: ListTile(
-            onTap: () async {
-              final navigator = Navigator.of(context);
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(
-                  child: CircularProgressIndicator(color: AppTheme.primaryBlue),
-                ),
-              );
-
-              String mockPeerId = 'mock_${chat['name'].toString().toLowerCase().replaceAll(' ', '_')}';
-              String mockRoomId = _currentUserId.compareTo(mockPeerId) < 0
-                  ? '${_currentUserId}_$mockPeerId'
-                  : '${mockPeerId}_$_currentUserId';
-
-              try {
-                String roomId = await _dbService.getOrCreateChatRoom(
-                  buyerId: _currentUserId,
-                  buyerName: _auth.currentUser?.displayName ?? _auth.currentUser?.email?.split('@')[0] ?? 'Pembeli',
-                  buyerPhoto: _auth.currentUser?.photoURL ?? '',
-                  sellerId: mockPeerId,
-                  sellerName: chat['name'],
-                  sellerPhoto: chat['avatarUrl'],
-                );
-
-                navigator.pop(); 
-
-                navigator.push(
-                  SlideFadeRightRoute(
-                    page: ChatDetailPage(
-                      roomId: roomId,
-                      peerId: mockPeerId,
-                      peerName: chat['name'],
-                      peerPhoto: chat['avatarUrl'],
-                    ),
-                  ),
-                );
-              } catch (e) {
-                navigator.pop(); 
-                navigator.push(
-                  SlideFadeRightRoute(
-                    page: ChatDetailPage(
-                      roomId: mockRoomId,
-                      peerId: mockPeerId,
-                      peerName: chat['name'],
-                      peerPhoto: chat['avatarUrl'],
-                    ),
-                  ),
-                );
-              }
-            },
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: AppTheme.bgLight,
-                  backgroundImage: NetworkImage(chat['avatarUrl']),
-                ),
-                if (chat['isOnline'] == true)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 13,
-                      height: 13,
-                      decoration: BoxDecoration(
-                        color: AppTheme.ecoTeal,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            title: Text(
-              chat['name'],
-              style: const TextStyle(
+            const SizedBox(height: 24),
+            const Text(
+              "Belum ada obrolan",
+              style: TextStyle(
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
-                fontSize: 15,
                 color: AppTheme.darkNavy,
               ),
             ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                chat['message'],
-                style: TextStyle(
-                  color: AppTheme.secondaryBlue.withValues(alpha: 0.7),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 8),
+            const Text(
+              "Mulai chat dengan penjual untuk membeli barang preloved!",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.secondaryBlue,
+                height: 1.5,
               ),
             ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  chat['time'],
-                  style: TextStyle(
-                    color: AppTheme.secondaryBlue.withValues(alpha: 0.5),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                if (chat['unreadCount'] > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.coralPeach,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: AppTheme.glowShadow(color: AppTheme.coralPeach),
-                    ),
-                    constraints: const BoxConstraints(minWidth: 20),
-                    child: Text(
-                      chat['unreadCount'].toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                else
-                  const SizedBox(height: 18),
-              ],
-            ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 
@@ -401,7 +281,7 @@ class _ChatPageState extends State<ChatPage> {
               radius: 26,
               backgroundColor: AppTheme.bgLight,
               backgroundImage: peerPhoto.isNotEmpty && peerPhoto.startsWith('http')
-                  ? NetworkImage(peerPhoto)
+                  ? CachedNetworkImageProvider(peerPhoto)
                   : null,
               child: peerPhoto.isEmpty || !peerPhoto.startsWith('http')
                   ? const Icon(Icons.person_rounded, size: 26, color: AppTheme.secondaryBlue)

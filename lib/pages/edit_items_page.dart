@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:reusea/models/product_model.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class EditItemPage extends StatefulWidget {
   // Terima objek produk dan document ID dari halaman MyItems
@@ -197,7 +198,9 @@ class _EditItemPageState extends State<EditItemPage> {
     try {
       final XFile? image = await picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 70,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 50,
       );
 
       if (image != null) {
@@ -770,9 +773,24 @@ class _EditItemPageState extends State<EditItemPage> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(isFirst ? 14 : 16),
             child: url.startsWith('http')
-                ? Image.network(url, fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) =>
-                        const Icon(Icons.broken_image, color: Colors.grey))
+                ? CachedNetworkImage(
+                    imageUrl: url,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: AppTheme.bgLight,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primaryBlue,
+                          ),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                  )
                 : const Icon(Icons.image, color: Colors.grey),
           ),
         ),

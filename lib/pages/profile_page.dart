@@ -4,12 +4,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:reusea/services/auth_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'settings_page.dart';
 import 'edit_profile_page.dart';
 import 'login_page.dart';
 import 'past_buys_page.dart';
 import 'past_sells_page.dart';
 import 'wishlist_page.dart';
+import 'incoming_orders_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -138,7 +140,7 @@ class ProfilePage extends StatelessWidget {
                               child: CircleAvatar(
                                 radius: 52,
                                 backgroundColor: AppTheme.bgLight,
-                                backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                                backgroundImage: photoUrl != null ? CachedNetworkImageProvider(photoUrl) : null,
                                 child: photoUrl == null
                                     ? const Icon(Icons.person_rounded, size: 52, color: AppTheme.secondaryBlue)
                                     : null,
@@ -218,6 +220,18 @@ class ProfilePage extends StatelessWidget {
                             Navigator.push(
                               context,
                               SlideRightRoute(page: const PastSellsPage()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMenuTile(
+                          Icons.inbox_outlined,
+                          'Pesanan Masuk',
+                          'Manage your incoming orders',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              SlideRightRoute(page: const IncomingOrdersPage()),
                             );
                           },
                         ),

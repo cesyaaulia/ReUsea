@@ -13,6 +13,7 @@ import 'feedback_page.dart';
 import 'past_buys_page.dart';
 import 'past_sells_page.dart';
 import 'landing_page.dart';
+import 'incoming_orders_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -358,8 +359,8 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final String displayName = user?.displayName ?? 'Cesya';
-    final String email = user?.email ?? 'cesya.aulia@mhs.unesa.ac.id';
+    final String email = user?.email ?? 'student@mhs.unesa.ac.id';
+    final String displayName = user?.displayName ?? email.split('@')[0];
 
     return Scaffold(
       body: OceanGradientBackground(
@@ -423,7 +424,7 @@ class SettingsPage extends StatelessWidget {
                             radius: 30,
                             backgroundColor: AppTheme.bgLight,
                             child: Text(
-                              displayName.isNotEmpty ? displayName[0].toUpperCase() : 'C',
+                              displayName.isNotEmpty ? displayName[0].toUpperCase() : 'S',
                               style: GoogleFonts.lexend(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -514,6 +515,18 @@ class SettingsPage extends StatelessWidget {
                         Navigator.push(
                           context,
                           SlideFadeRightRoute(page: const PastSellsPage()),
+                        );
+                      },
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.inbox_outlined,
+                      title: 'Pesanan Masuk',
+                      bgIconColor: Colors.teal.withValues(alpha: 0.1),
+                      iconColor: Colors.teal,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideFadeRightRoute(page: const IncomingOrdersPage()),
                         );
                       },
                     ),

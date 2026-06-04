@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:reusea/models/review_model.dart';
 
 class SellerProfilePage extends StatefulWidget {
@@ -148,7 +149,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> {
                                 child: CircleAvatar(
                                   radius: 46,
                                   backgroundColor: Colors.white,
-                                  backgroundImage: sellerPhoto.isNotEmpty ? NetworkImage(sellerPhoto) : null,
+                                  backgroundImage: sellerPhoto.isNotEmpty ? CachedNetworkImageProvider(sellerPhoto) : null,
                                   child: sellerPhoto.isEmpty
                                       ? const Icon(Icons.person_rounded, size: 46, color: AppTheme.secondaryBlue)
                                       : null,
@@ -501,7 +502,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: AppTheme.bgLight,
-                backgroundImage: review.reviewerPhoto.isNotEmpty ? NetworkImage(review.reviewerPhoto) : null,
+                backgroundImage: review.reviewerPhoto.isNotEmpty ? CachedNetworkImageProvider(review.reviewerPhoto) : null,
                 child: review.reviewerPhoto.isEmpty
                     ? const Icon(Icons.person, size: 18, color: AppTheme.secondaryBlue)
                     : null,

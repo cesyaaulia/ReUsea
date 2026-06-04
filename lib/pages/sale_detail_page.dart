@@ -7,6 +7,7 @@ import 'package:reusea/services/database_service.dart';
 import 'package:reusea/services/delivery_service.dart';
 import 'package:reusea/utils/theme.dart';
 import 'package:reusea/utils/page_transitions.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/product_model.dart';
 import 'chat_detail_page.dart';
 
@@ -29,6 +30,41 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
   void initState() {
     super.initState();
     _currentStatus = widget.saleData['status'] ?? 'Processing';
+  }
+
+  void _confirmSale() async {
+    setState(() => _isLoading = true);
+    final String orderId = widget.saleData['id'] ?? '';
+
+    try {
+      await _dbService.updateOrderStatus(orderId, 'Processing');
+      setState(() {
+        _currentStatus = 'Processing';
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Penjualan berhasil dikonfirmasi. Silakan lakukan COD dengan pembeli.", style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
+            backgroundColor: AppTheme.ecoTeal,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal mengonfirmasi penjualan: $e"),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _cancelSale() async {
@@ -187,6 +223,8 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
       currentStep = 2;
     } else if (status == 'Processing') {
       currentStep = 1;
+    } else if (status == 'Waiting Confirmation') {
+      currentStep = 0;
     }
 
     Color stepColor(int step) {
@@ -195,7 +233,7 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
     }
 
     String stepLabel(int step) {
-      if (step == 0) return "Dipesan";
+      if (step == 0) return "Menunggu";
       if (step == 1) return "Diproses COD";
       if (step == 2) {
         return status == 'Cancelled' ? "Batal" : "Selesai";
@@ -298,6 +336,9 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
         } else if (_currentStatus == 'Cancelled') {
           badgeColor = AppTheme.coralPeach;
           statusIndo = "Batal";
+        } else if (_currentStatus == 'Waiting Confirmation') {
+          badgeColor = AppTheme.primaryBlue;
+          statusIndo = "Menunggu Konfirmasi";
         } else {
           badgeColor = AppTheme.sunsetOrange;
           statusIndo = "Diproses";
@@ -379,7 +420,24 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
                                         child: ClipRRect(
                                           borderRadius: BorderRadius.circular(20),
                                           child: item['imagePath'] != null && item['imagePath'].startsWith('http')
-                                              ? Image.network(item['imagePath'], fit: BoxFit.cover)
+                                              ? CachedNetworkImage(
+                                                  imageUrl: item['imagePath'],
+                                                  fit: BoxFit.cover,
+                                                  placeholder: (context, url) => Container(
+                                                    color: AppTheme.bgLight,
+                                                    child: const Center(
+                                                      child: SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: AppTheme.primaryBlue,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                                                )
                                               : Image.asset(
                                                   item['imagePath'] != null && item['imagePath'].isNotEmpty
                                                       ? item['imagePath']
@@ -468,7 +526,7 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
                                           CircleAvatar(
                                             radius: 26,
                                             backgroundColor: AppTheme.bgLight,
-                                            backgroundImage: bPhoto.isNotEmpty ? NetworkImage(bPhoto) : null,
+                                            backgroundImage: bPhoto.isNotEmpty ? CachedNetworkImageProvider(bPhoto) : null,
                                             child: bPhoto.isEmpty ? const Icon(Icons.person_rounded, color: AppTheme.secondaryBlue) : null,
                                           ),
                                           const SizedBox(width: 14),
@@ -607,7 +665,47 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
                                 ],
 
                                 // 6. ACTION BUTTONS
-                                if (_currentStatus == 'Processing')
+                                if (_currentStatus == 'Waiting Confirmation')
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: SizedBox(
+                                          height: 52,
+                                          child: TextButton.icon(
+                                            onPressed: _cancelSale,
+                                            icon: const Icon(Icons.cancel_outlined, color: Colors.white),
+                                            label: Text(
+                                              'Batalkan',
+                                              style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                            ),
+                                            style: TextButton.styleFrom(
+                                              backgroundColor: AppTheme.coralPeach,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: SizedBox(
+                                          height: 52,
+                                          child: TextButton.icon(
+                                            onPressed: _confirmSale,
+                                            icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+                                            label: Text(
+                                              'Konfirmasi',
+                                              style: GoogleFonts.lexend(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                            ),
+                                            style: TextButton.styleFrom(
+                                              backgroundColor: AppTheme.ecoTeal,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else if (_currentStatus == 'Processing')
                                   Row(
                                     children: [
                                       Expanded(
