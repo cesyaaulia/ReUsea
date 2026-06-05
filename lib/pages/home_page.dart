@@ -6,6 +6,7 @@ import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/theme.dart';
 import '../models/product_model.dart';
+import '../models/achievement_model.dart';
 import 'detail_page.dart';
 import 'cart_page.dart';
 import 'notification_page.dart';
@@ -62,6 +63,10 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _checkAndSeedData();
     _loadWishlist();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _dbService.updateAchievements(uid);
+    }
   }
 
   void _loadWishlist() {
@@ -141,7 +146,7 @@ class _HomePageState extends State<HomePage> {
               var availableDocs = allDocs.where((doc) {
                 var data = doc.data() as Map<String, dynamic>;
                 String status = data['status'] ?? 'Available';
-                return status != 'Processing' && status != 'Completed';
+                return status == 'Available';
               }).toList();
 
               // Filter by category
@@ -473,44 +478,17 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 20),
 
-          // Greetings & Mascots Section (Row 2)
+          // Greetings Section
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  Text(
-                    'Halo, $name',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  // Sustainability Mascot badge 🐢
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white30, width: 1),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text("🐢", style: TextStyle(fontSize: 14)),
-                        SizedBox(width: 5),
-                        Text(
-                          "Eco Buddy",
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Text(
+                'Halo, $name',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 6),
               const Text(
@@ -547,22 +525,125 @@ class _HomePageState extends State<HomePage> {
               int limbahBerkurang = barangReused * 2;
               String formattedSavings = _formatSavings(totalSavings);
 
-              return GlassContainer(
-                radius: 24,
-                blur: 15,
-                opacity: 0.25,
-                border: Border.all(color: Colors.white24, width: 1.5),
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildImpactItem("♻", "$barangReused", "Barang Reused"),
-                    _buildImpactDivider(),
-                    _buildImpactItem("🌱", "$limbahBerkurang Kg", "Limbah Berkurang"),
-                    _buildImpactDivider(),
-                    _buildImpactItem("💰", formattedSavings, "Hemat Mahasiswa"),
-                  ],
-                ),
+              return Column(
+                children: [
+                  GlassContainer(
+                    radius: 24,
+                    blur: 15,
+                    opacity: 0.25,
+                    border: Border.all(color: Colors.white24, width: 1.5),
+                    padding: const EdgeInsets.all(18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildImpactItem("♻", "$barangReused", "Barang Reused"),
+                        _buildImpactDivider(),
+                        _buildImpactItem("🌱", "$limbahBerkurang Kg", "Limbah Berkurang"),
+                        _buildImpactDivider(),
+                        _buildImpactItem("💰", formattedSavings, "Hemat Mahasiswa"),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Achievement Saya row/glassmorphic item
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(currentUserId)
+                        .snapshots(),
+                    builder: (context, userSnap) {
+                      List<dynamic> unlockedIds = [];
+                      if (userSnap.hasData && userSnap.data!.exists) {
+                        var userData = userSnap.data!.data() as Map<String, dynamic>;
+                        unlockedIds = userData['achievements'] ?? [];
+                      }
+                      
+                      // Cari achievement tertinggi
+                      Achievement? highestAchievement;
+                      for (var ach in achievementsList) {
+                        if (unlockedIds.contains(ach.id)) {
+                          highestAchievement = ach;
+                        }
+                      }
+                      
+                      if (highestAchievement == null) {
+                        return GlassContainer(
+                          radius: 16,
+                          blur: 15,
+                          opacity: 0.15,
+                          border: Border.all(color: Colors.white12, width: 1),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: Row(
+                            children: [
+                              const Text("🥉", style: TextStyle(fontSize: 16)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "Achievement Saya",
+                                      style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      "Lakukan 1x transaksi untuk badge pertama!",
+                                      style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11, fontWeight: FontWeight.w800),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      return GlassContainer(
+                        radius: 16,
+                        blur: 15,
+                        opacity: 0.20,
+                        border: Border.all(color: Colors.white24, width: 1.2),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Row(
+                          children: [
+                            Text(
+                              highestAchievement.emoji,
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "Achievement Saya",
+                                    style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    highestAchievement.name,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                unlockedIds.length == achievementsList.length
+                                    ? "MAX"
+                                    : "${unlockedIds.length}/${achievementsList.length} Unlocked",
+                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               );
             },
           ),

@@ -230,7 +230,7 @@ class _EditItemPageState extends State<EditItemPage> {
     });
   }
 
-  void _handleUpdateItem() async {
+  void _handleUpdateItem({String? status}) async {
     if (_nameController.text.trim().isEmpty ||
         (selectedType == "Dijual" && _priceController.text.trim().isEmpty) ||
         _descriptionController.text.trim().isEmpty) {
@@ -271,12 +271,15 @@ class _EditItemPageState extends State<EditItemPage> {
       campus: selectedCampus,
       codPoint: selectedCodPoint,
       codCrowdLevel: codPointCrowdLevels[selectedCodPoint] ?? "Sedang",
+      status: status,
       onSuccess: () {
         setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Data barang berhasil diperbarui."),
+            SnackBar(
+              content: Text(status == 'Available' && widget.product.status == 'Draft'
+                  ? "Draf berhasil dipublikasikan!"
+                  : "Data barang berhasil diperbarui."),
               backgroundColor: Colors.green,
             ),
           );
@@ -676,30 +679,100 @@ class _EditItemPageState extends State<EditItemPage> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                GestureDetector(
-                  onTap: _isLoading ? null : _handleUpdateItem,
-                  child: Container(
-                    width: double.infinity,
-                    height: 55,
-                    decoration: BoxDecoration(
-                      gradient: _isLoading ? null : AppTheme.primaryGradient,
-                      color: _isLoading ? Colors.grey : null,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: _isLoading ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
-                    ),
-                    alignment: Alignment.center,
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "Simpan Perubahan",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                widget.product.status == 'Draft'
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _isLoading ? null : () => _handleUpdateItem(status: 'Draft'),
+                              child: Container(
+                                height: 55,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 1.5),
+                                  boxShadow: AppTheme.softShadow(),
+                                ),
+                                alignment: Alignment.center,
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppTheme.primaryBlue,
+                                        ),
+                                      )
+                                    : const Text(
+                                        "Simpan Draft",
+                                        style: TextStyle(
+                                          color: AppTheme.primaryBlue,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                              ),
                             ),
                           ),
-                  ),
-                ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _isLoading ? null : () => _handleUpdateItem(status: 'Available'),
+                              child: Container(
+                                height: 55,
+                                decoration: BoxDecoration(
+                                  gradient: _isLoading ? null : AppTheme.primaryGradient,
+                                  color: _isLoading ? Colors.grey : null,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: _isLoading ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
+                                ),
+                                alignment: Alignment.center,
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        "Publikasikan",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : GestureDetector(
+                        onTap: _isLoading ? null : () => _handleUpdateItem(),
+                        child: Container(
+                          width: double.infinity,
+                          height: 55,
+                          decoration: BoxDecoration(
+                            gradient: _isLoading ? null : AppTheme.primaryGradient,
+                            color: _isLoading ? Colors.grey : null,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: _isLoading ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
+                          ),
+                          alignment: Alignment.center,
+                          child: _isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Text(
+                                  "Simpan Perubahan",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                        ),
+                      ),
               ],
             ),
           ),

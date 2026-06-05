@@ -7,6 +7,7 @@ import 'package:reusea/services/auth_service.dart';
 import 'package:reusea/services/database_service.dart';
 import 'package:reusea/utils/page_transitions.dart';
 import 'package:reusea/pages/edit_items_page.dart';
+import 'package:reusea/pages/sell_item_page.dart';
 import 'package:reusea/utils/theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -86,6 +87,15 @@ class _MyItemsPageState extends State<MyItemsPage> {
         ],
       ),
     );
+  }
+
+  String _formatDraftDate(Timestamp? timestamp) {
+    if (timestamp == null) return '-';
+    DateTime date = timestamp.toDate();
+    String day = date.day.toString().padLeft(2, '0');
+    String month = date.month.toString().padLeft(2, '0');
+    String year = date.year.toString();
+    return '$day/$month/$year';
   }
 
   @override
@@ -392,6 +402,17 @@ class _MyItemsPageState extends State<MyItemsPage> {
                         fontSize: 15,
                       ),
                     ),
+                    if (product.status == 'Draft') ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        "Disimpan: ${_formatDraftDate(product.createdAt)}",
+                        style: GoogleFonts.lexend(
+                          color: AppTheme.secondaryBlue,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -402,88 +423,194 @@ class _MyItemsPageState extends State<MyItemsPage> {
           const SizedBox(height: 12),
           // Action Buttons
           Row(
-            children: [
-              Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        SlideUpRoute(
-                          page: EditItemPage(
-                            product: product,
-                            productId: productId,
+            children: product.status == 'Draft'
+                ? [
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              SlideUpRoute(
+                                page: EditItemPage(
+                                  product: product,
+                                  productId: productId,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.1), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.edit_note_rounded, size: 18, color: AppTheme.primaryBlue),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "Edit Draft",
+                                  style: GoogleFonts.lexend(
+                                    color: AppTheme.primaryBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.1), width: 1),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.edit_rounded, size: 16, color: AppTheme.primaryBlue),
-                          const SizedBox(width: 6),
-                          Text(
-                            "Edit",
-                            style: GoogleFonts.lexend(
-                              color: AppTheme.primaryBlue,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () => _confirmDelete(productId),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.coralPeach.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppTheme.coralPeach.withValues(alpha: 0.1), width: 1),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.delete_rounded, size: 16, color: AppTheme.coralPeach),
-                          const SizedBox(width: 6),
-                          Text(
-                            "Hapus",
-                            style: GoogleFonts.lexend(
-                              color: AppTheme.coralPeach,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () async {
+                            try {
+                              await _dbService.publishProduct(productId);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Barang berhasil dipublikasikan!",
+                                      style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
+                                    ),
+                                    backgroundColor: AppTheme.ecoTeal,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Gagal mempublikasikan: $e"),
+                                    backgroundColor: Colors.redAccent,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.primaryGradient,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: AppTheme.softShadow(),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.rocket_launch_rounded, size: 16, color: Colors.white),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "Publikasikan",
+                                  style: GoogleFonts.lexend(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-            ],
+                  ]
+                : [
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              SlideUpRoute(
+                                page: EditItemPage(
+                                  product: product,
+                                  productId: productId,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.1), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.edit_rounded, size: 16, color: AppTheme.primaryBlue),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "Edit",
+                                  style: GoogleFonts.lexend(
+                                    color: AppTheme.primaryBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => _confirmDelete(productId),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.coralPeach.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppTheme.coralPeach.withValues(alpha: 0.1), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.delete_rounded, size: 16, color: AppTheme.coralPeach),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "Hapus",
+                                  style: GoogleFonts.lexend(
+                                    color: AppTheme.coralPeach,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
           ),
         ],
       ),
     );
   }
+
 
   Widget _buildEmptyState(String tabName) {
     String emoji = "🐢";
@@ -496,8 +623,8 @@ class _MyItemsPageState extends State<MyItemsPage> {
       subtitle = "Barang jualanmu yang sudah laku akan muncul di tab ini.";
     } else if (tabName == "Draft") {
       emoji = "📝";
-      title = "Tidak ada draf";
-      subtitle = "Kamu bisa menyimpan draf barang jualan untuk diunggah nanti.";
+      title = "Belum ada draft";
+      subtitle = "Simpan barang yang belum siap dipublikasikan agar dapat dilanjutkan nanti.";
     }
 
     return Center(
@@ -542,6 +669,34 @@ class _MyItemsPageState extends State<MyItemsPage> {
                 height: 1.5,
               ),
             ),
+            if (tabName == "Draft") ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    SlideUpRoute(page: const SellItemPage()),
+                  );
+                },
+                icon: const Icon(Icons.add_rounded, color: Colors.white),
+                label: Text(
+                  "Buat Draft Baru",
+                  style: GoogleFonts.lexend(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ]
           ],
         ),
       ),

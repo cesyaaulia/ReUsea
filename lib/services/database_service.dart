@@ -90,6 +90,7 @@ class DatabaseService {
     String campus = 'UNESA Lidah Wetan',
     String codPoint = '',
     String codCrowdLevel = 'Sedang',
+    String status = 'Available',
     required Function() onSuccess,
     required Function(String) onError,
   }) async {
@@ -136,7 +137,7 @@ class DatabaseService {
         'sellerPhoto': sellerPhoto,
         'imagePath': mainImageUrl,
         'imageUrls': imageUrls,
-        'status': 'Available',
+        'status': status,
         'productType': productType,
         'campus': campus,
         'codPoint': codPoint,
@@ -145,12 +146,14 @@ class DatabaseService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      await createNotification(
-        receiverId: 'ALL',
-        title: 'Produk Baru Di-upload!',
-        message:
-            '$sellerName baru saja mengunggah barang "$name" di kategori $category.',
-      );
+      if (status == 'Available') {
+        await createNotification(
+          receiverId: 'ALL',
+          title: 'Produk Baru Di-upload!',
+          message:
+              '$sellerName baru saja mengunggah barang "$name" di kategori $category.',
+        );
+      }
 
       onSuccess();
     } catch (e) {
@@ -174,6 +177,7 @@ class DatabaseService {
     String campus = 'UNESA Lidah Wetan',
     String codPoint = '',
     String codCrowdLevel = 'Sedang',
+    String? status,
     required Function() onSuccess,
     required Function(String) onError,
   }) async {
@@ -216,7 +220,7 @@ class DatabaseService {
         } catch (_) {}
       }
 
-      await _db.collection('products').doc(productId).update({
+      final Map<String, dynamic> updateData = {
         'name': name,
         'price': price,
         'category': category.toUpperCase(),
@@ -233,7 +237,22 @@ class DatabaseService {
         'codCrowdLevel': codCrowdLevel,
         'sellerFaculty': sellerFaculty,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (status != null) {
+        updateData['status'] = status;
+      }
+
+      await _db.collection('products').doc(productId).update(updateData);
+
+      if (status == 'Available') {
+        await createNotification(
+          receiverId: 'ALL',
+          title: 'Produk Baru Di-upload!',
+          message:
+              '$sellerName baru saja mengunggah barang "$name" di kategori $category.',
+        );
+      }
 
       onSuccess();
     } catch (e) {
@@ -499,8 +518,9 @@ class DatabaseService {
     required String text,
     String? imageUrl,
     String? videoUrl,
+    Map<String, dynamic>? productData,
   }) async {
-    if (text.trim().isEmpty && imageUrl == null && videoUrl == null) return;
+    if (text.trim().isEmpty && imageUrl == null && videoUrl == null && productData == null) return;
 
     DocumentReference messageRef = _db
         .collection('chat_rooms')
@@ -515,6 +535,7 @@ class DatabaseService {
       'text': text.trim(),
       'imageUrl': imageUrl,
       'videoUrl': videoUrl,
+      'productData': productData,
       'timestamp': FieldValue.serverTimestamp(),
       'isRead': false,
     });
@@ -535,6 +556,8 @@ class DatabaseService {
           previewText = '📷 Foto';
         else if (videoUrl != null)
           previewText = '🎥 Video';
+        else if (productData != null)
+          previewText = '📦 Produk: ${productData['name'] ?? ''}';
       }
 
       Map<String, dynamic> updateData = {
@@ -944,6 +967,89 @@ class DatabaseService {
       await addToCart(userId, product);
     } catch (e) {
       print("Gagal memindahkan dari wishlist ke keranjang: $e");
+    }
+  }
+
+  Future<void> publishProduct(String productId) async {
+    try {
+      final doc = await _db.collection('products').doc(productId).get();
+      if (!doc.exists) return;
+
+      final data = doc.data() as Map<String, dynamic>;
+      final String name = data['name'] ?? '';
+      final String category = data['category'] ?? '';
+      final String sellerName = data['sellerName'] ?? 'Mahasiswa UNESA';
+
+      await _db.collection('products').doc(productId).update({
+        'status': 'Available',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      await createNotification(
+        receiverId: 'ALL',
+        title: 'Produk Baru Di-upload!',
+        message: '$sellerName baru saja mengunggah barang "$name" di kategori $category.',
+      );
+    } catch (e) {
+      throw 'Gagal mempublikasikan draf: $e';
+    }
+  }
+
+  Future<Map<String, int>> getUserStats(String userId) async {
+    final soldsSnap = await _db.collection('orders')
+        .where('sellerId', isEqualTo: userId)
+        .where('status', isEqualTo: 'Completed')
+        .get();
+    final boughtSnap = await _db.collection('orders')
+        .where('buyerId', isEqualTo: userId)
+        .where('status', isEqualTo: 'Completed')
+        .get();
+
+    return {
+      'solds': soldsSnap.docs.length,
+      'bought': boughtSnap.docs.length,
+    };
+  }
+
+  Future<void> updateAchievements(String userId) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final stats = await getUserStats(userId);
+      final int solds = stats['solds'] ?? 0;
+      final int bought = stats['bought'] ?? 0;
+      final int totalTransactions = solds + bought;
+      final int limbahBerkurang = bought * 2;
+
+      List<String> achievements = [];
+      if (totalTransactions >= 1) achievements.add('eco_beginner');
+      if (totalTransactions >= 5) achievements.add('eco_contributor');
+      if (totalTransactions >= 20) achievements.add('eco_champion');
+      if (limbahBerkurang >= 20) achievements.add('sustainability_hero');
+      if (solds >= 10) achievements.add('campus_seller');
+
+      final userDocRef = _db.collection('users').doc(userId);
+      final userDoc = await userDocRef.get();
+
+      Map<String, dynamic> dataToSet = {
+        'solds': solds,
+        'bought': bought,
+        'achievements': achievements,
+      };
+
+      if (!userDoc.exists) {
+        dataToSet['uid'] = userId;
+        dataToSet['name'] = user.displayName ?? user.email?.split('@')[0] ?? 'Sobat ReUsea';
+        dataToSet['email'] = user.email;
+        dataToSet['faculty'] = 'Fakultas Vokasi';
+        dataToSet['joinedAt'] = 'Juni 2026';
+        dataToSet['createdAt'] = FieldValue.serverTimestamp();
+      }
+
+      await userDocRef.set(dataToSet, SetOptions(merge: true));
+    } catch (e) {
+      print("Error updating achievements: $e");
     }
   }
 }

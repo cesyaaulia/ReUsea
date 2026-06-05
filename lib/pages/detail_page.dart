@@ -151,6 +151,7 @@ class _DetailPageState extends State<DetailPage> {
 
         final int totalImages = imageUrls.isNotEmpty ? imageUrls.length : 1;
         bool isProductProcessing = currentStatus == 'Processing';
+        bool isProductDraft = currentStatus == 'Draft';
 
         // CAROUSEL MULTI-FOTO DENGAN RADIUS LEMBUT & INDIKATOR MODEREN
         Widget buildImageCarousel() {
@@ -931,7 +932,7 @@ class _DetailPageState extends State<DetailPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Add to Cart button
-                if (!isProductProcessing && widget.product.sellerId != (_auth.currentUser?.uid ?? ''))
+                if (!isProductProcessing && !isProductDraft && widget.product.sellerId != (_auth.currentUser?.uid ?? ''))
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: SizedBox(
@@ -968,88 +969,107 @@ class _DetailPageState extends State<DetailPage> {
                       ),
                     ),
                   ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: isProductProcessing
-                            ? null
-                            : () {
-                                _navigateToChat(
-                                  initialSuggestions: [
-                                    "Barangnya masih ada nggak kak?",
-                                    "Kondisi barangnya gimana kak?",
-                                    "Boleh nego nggak kak?",
-                                  ],
-                                );
-                              },
-                        icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-                        label: const Text("Tanya"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.primaryBlue,
-                          side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
+                if (isProductDraft)
+                  Container(
+                    width: double.infinity,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      "Draf Produk (Belum Dipublikasikan)",
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: GestureDetector(
-                        onTap: isProductProcessing
-                            ? null
-                            : () {
-                                final currentUser = _auth.currentUser;
-                                if (currentUser == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Silakan login terlebih dahulu."),
-                                      backgroundColor: AppTheme.secondaryBlue,
-                                    ),
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: isProductProcessing
+                              ? null
+                              : () {
+                                  _navigateToChat(
+                                    initialSuggestions: [
+                                      "Barangnya masih ada nggak kak?",
+                                      "Kondisi barangnya gimana kak?",
+                                      "Boleh nego nggak kak?",
+                                    ],
                                   );
-                                  return;
-                                }
-                                if (widget.product.sellerId == currentUser.uid) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Anda tidak bisa membeli barang sendiri!"),
-                                      backgroundColor: AppTheme.secondaryBlue,
-                                    ),
-                                  );
-                                  return;
-                                }
-                                Navigator.push(
-                                  context,
-                                  SlideUpRoute(
-                                    page: CheckoutPage(product: widget.product),
-                                  ),
-                                );
-                              },
-                        child: Container(
-                          height: 50,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            gradient: isProductProcessing ? null : AppTheme.primaryGradient,
-                            color: isProductProcessing ? Colors.grey : null,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: isProductProcessing ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
-                          ),
-                          child: Text(
-                            isProductProcessing ? "Diproses" : (widget.product.productType == 'Donasi' ? "Klaim Donasi 🎁" : "Beli Sekarang"),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                                },
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                          label: const Text("Tanya"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primaryBlue,
+                            side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: GestureDetector(
+                          onTap: isProductProcessing
+                              ? null
+                              : () {
+                                  final currentUser = _auth.currentUser;
+                                  if (currentUser == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Silakan login terlebih dahulu."),
+                                        backgroundColor: AppTheme.secondaryBlue,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  if (widget.product.sellerId == currentUser.uid) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Anda tidak bisa membeli barang sendiri!"),
+                                        backgroundColor: AppTheme.secondaryBlue,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  Navigator.push(
+                                    context,
+                                    SlideUpRoute(
+                                      page: CheckoutPage(product: widget.product),
+                                    ),
+                                  );
+                                },
+                          child: Container(
+                            height: 50,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              gradient: isProductProcessing ? null : AppTheme.primaryGradient,
+                              color: isProductProcessing ? Colors.grey : null,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: isProductProcessing ? null : AppTheme.glowShadow(color: AppTheme.primaryBlue),
+                            ),
+                            child: Text(
+                              isProductProcessing ? "Diproses" : (widget.product.productType == 'Donasi' ? "Klaim Donasi 🎁" : "Beli Sekarang"),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

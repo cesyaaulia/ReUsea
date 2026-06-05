@@ -12,6 +12,8 @@ import 'past_buys_page.dart';
 import 'past_sells_page.dart';
 import 'wishlist_page.dart';
 import 'incoming_orders_page.dart';
+import '../models/achievement_model.dart';
+import '../services/database_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -75,6 +77,10 @@ class ProfilePage extends StatelessWidget {
               String userName = currentUser?.displayName ?? userEmail.split('@')[0];
               String? photoUrl = currentUser?.photoURL;
               String currentUserId = currentUser?.uid ?? '';
+
+              if (currentUserId.isNotEmpty) {
+                DatabaseService().updateAchievements(currentUserId);
+              }
 
               return CustomScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -278,6 +284,22 @@ class ProfilePage extends StatelessWidget {
                         _buildSustainabilityCard(currentUserId),
 
                         const SizedBox(height: 30),
+                        // ACHIEVEMENT SAYA
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8, bottom: 12),
+                          child: Text(
+                            'ACHIEVEMENT SAYA',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.secondaryBlue,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                        _buildAchievementsCard(currentUserId),
+
+                        const SizedBox(height: 30),
                         const Padding(
                           padding: EdgeInsets.only(left: 8, bottom: 12),
                           child: Text(
@@ -423,9 +445,153 @@ class ProfilePage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildImpactStat("♻", "$itemsReused", "Barang\nReused"),
-                  _buildImpactStat("🌱", "${carbonSaved.toStringAsFixed(0)} Kg", "CO₂\nDiselamatkan"),
-                  _buildImpactStat("💰", "Rp ${(moneySaved / 1000).toStringAsFixed(0)}K", "Uang\nTerhemat"),
+                  _buildImpactStat("🌱", "${carbonSaved.toStringAsFixed(0)} Kg", "Limbah\nBerkurang"),
+                  _buildImpactStat("💰", "Rp ${(moneySaved / 1000).toStringAsFixed(0)}K", "Hemat\nMahasiswa"),
                 ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAchievementsCard(String uid) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      builder: (context, snapshot) {
+        List<dynamic> unlockedAchievements = [];
+        int solds = 0;
+        int bought = 0;
+        
+        if (snapshot.hasData && snapshot.data!.exists) {
+          var userData = snapshot.data!.data() as Map<String, dynamic>;
+          unlockedAchievements = userData['achievements'] ?? [];
+          solds = userData['solds'] ?? 0;
+          bought = userData['bought'] ?? 0;
+        }
+
+        int totalTransactions = solds + bought;
+        int limbahBerkurang = bought * 2;
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: AppTheme.softShadow(),
+            border: Border.all(
+              color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: achievementsList.length,
+                separatorBuilder: (context, index) => const Divider(height: 20, thickness: 1, color: Color(0xFFF1F5F9)),
+                itemBuilder: (context, index) {
+                  final ach = achievementsList[index];
+                  bool isUnlocked = unlockedAchievements.contains(ach.id);
+                  
+                  // Hitung kemajuan
+                  String progressText = "";
+                  double progressPct = 0.0;
+                  if (ach.id == 'eco_beginner') {
+                    progressText = "$totalTransactions / 1";
+                    progressPct = (totalTransactions / 1.0).clamp(0.0, 1.0);
+                  } else if (ach.id == 'eco_contributor') {
+                    progressText = "$totalTransactions / 5";
+                    progressPct = (totalTransactions / 5.0).clamp(0.0, 1.0);
+                  } else if (ach.id == 'eco_champion') {
+                    progressText = "$totalTransactions / 20";
+                    progressPct = (totalTransactions / 20.0).clamp(0.0, 1.0);
+                  } else if (ach.id == 'sustainability_hero') {
+                    progressText = "$limbahBerkurang / 20 Kg";
+                    progressPct = (limbahBerkurang / 20.0).clamp(0.0, 1.0);
+                  } else if (ach.id == 'campus_seller') {
+                    progressText = "$solds / 10";
+                    progressPct = (solds / 10.0).clamp(0.0, 1.0);
+                  }
+
+                  return Opacity(
+                    opacity: isUnlocked ? 1.0 : 0.5,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: isUnlocked 
+                                ? AppTheme.primaryBlue.withValues(alpha: 0.08) 
+                                : Colors.grey.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            ach.emoji,
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    ach.name,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: isUnlocked ? AppTheme.darkNavy : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  if (!isUnlocked)
+                                    Text(
+                                      progressText,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                ach.description,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isUnlocked ? AppTheme.secondaryBlue : Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              if (!isUnlocked) ...[
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: progressPct,
+                                    backgroundColor: const Color(0xFFF1F5F9),
+                                    color: AppTheme.primaryBlue.withValues(alpha: 0.4),
+                                    minHeight: 4,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ),

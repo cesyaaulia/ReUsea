@@ -20,6 +20,7 @@ class Product {
   final String codPoint; // Titik rekomendasi COD
   final String codCrowdLevel; // Crowd level: "Ramai", "Sedang", "Sepi"
   final String sellerFaculty; // Fakultas penjual
+  final Timestamp? createdAt;
 
   Product({
     required this.id,
@@ -41,6 +42,7 @@ class Product {
     this.codPoint = '',
     this.codCrowdLevel = 'Sedang',
     this.sellerFaculty = 'Fakultas Vokasi',
+    this.createdAt,
   });
 
   factory Product.fromMap(Map<String, dynamic> map) {
@@ -78,7 +80,32 @@ class Product {
       codPoint: map['codPoint'] ?? '',
       codCrowdLevel: map['codCrowdLevel'] ?? 'Sedang',
       sellerFaculty: map['sellerFaculty'] ?? 'Fakultas Vokasi',
+      createdAt: createdAt,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'category': category,
+      'name': name,
+      'price': price,
+      'imagePath': imagePath,
+      'imageUrls': imageUrls,
+      'description': description,
+      'location': location,
+      'sellerId': sellerId,
+      'sellerName': sellerName,
+      'sellerPhoto': sellerPhoto,
+      'condition': condition,
+      'status': status,
+      'productType': productType,
+      'campus': campus,
+      'codPoint': codPoint,
+      'codCrowdLevel': codCrowdLevel,
+      'sellerFaculty': sellerFaculty,
+      'createdAt': createdAt,
+    };
   }
 
   static String _calculateTimeAgo(Timestamp? timestamp) {

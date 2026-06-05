@@ -8,6 +8,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import '../models/product_model.dart';
+import 'detail_page.dart';
+import '../utils/page_transitions.dart';
 
 class ChatDetailPage extends StatefulWidget {
   final String roomId;
@@ -39,6 +41,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   
   List<String> _suggestions = [];
   bool _showProductCard = true;
+  bool _isLinkSent = false;
   late String _currentUserId;
   late String _currentUserName;
   bool _isUploading = false;
@@ -98,6 +101,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       text: text,
     );
 
+    _dbService.resetUnreadCount(roomId: widget.roomId, userId: _currentUserId);
+  }
+
+  void _sendProductCard(Product product) async {
+    await _dbService.sendMessage(
+      roomId: widget.roomId,
+      senderId: _currentUserId,
+      senderName: _currentUserName,
+      text: '',
+      productData: product.toMap(),
+    );
     _dbService.resetUnreadCount(roomId: widget.roomId, userId: _currentUserId);
   }
 
@@ -452,32 +466,33 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 icon: const Icon(Icons.close_rounded, size: 18, color: AppTheme.secondaryBlue),
               ),
               const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () {
-                  _sendMessage("Halo, saya tertarik dengan barang ini: ${prod.name} (${prod.price})");
-                  setState(() {
-                    _showProductCard = false;
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              if (!_isLinkSent)
+                ElevatedButton(
+                  onPressed: () {
+                    _sendProductCard(prod);
+                    setState(() {
+                      _isLinkSent = true;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    "Kirim Link",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                child: const Text(
-                  "Kirim Link",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
             ],
           ),
         ],
@@ -539,6 +554,175 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final videoUrl = data['videoUrl'] as String?;
     final timestamp = data['timestamp'] as Timestamp?;
     final timeFormatted = _formatTimestamp(timestamp);
+
+    final productData = data['productData'] as Map<String, dynamic>?;
+
+    if (productData != null) {
+      final product = Product.fromMap(productData);
+      final imageToShow = product.imageUrls.isNotEmpty ? product.imageUrls.first : product.imagePath;
+      
+      return Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 250,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: AppTheme.softShadow(),
+                  border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.1), width: 1.2),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.inventory_2_outlined, size: 14, color: AppTheme.primaryBlue),
+                        const SizedBox(width: 6),
+                        const Text(
+                          "Produk yang Dibahas",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.secondaryBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: imageToShow.startsWith('http')
+                                ? CachedNetworkImage(
+                                    imageUrl: imageToShow,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(
+                                      color: AppTheme.bgLight,
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 15,
+                                          height: 15,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppTheme.primaryBlue,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                                  )
+                                : Image.asset('assets/images/profile_placeholder.png', fit: BoxFit.cover),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: AppTheme.darkNavy,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                product.price,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: AppTheme.primaryBlue,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: product.condition == 'Baru'
+                                      ? AppTheme.ecoTeal.withValues(alpha: 0.1)
+                                      : AppTheme.sunsetOrange.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  product.condition,
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    color: product.condition == 'Baru' ? AppTheme.ecoTeal : AppTheme.sunsetOrange,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(height: 1, thickness: 1, color: Color(0xFFF0F4F8)),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            HeroFadeRoute(page: DetailPage(product: product)),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Tampilkan Detail Produk",
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryBlue),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppTheme.primaryBlue),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 3),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  timeFormatted,
+                  style: TextStyle(
+                    color: AppTheme.secondaryBlue.withValues(alpha: 0.6),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     final hasImage = imageUrl != null && imageUrl.isNotEmpty;
     final hasVideo = videoUrl != null && videoUrl.isNotEmpty;
