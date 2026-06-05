@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,6 +21,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+
+  late Stream<User?> _userChangesStream;
+  late Stream<QuerySnapshot> _productsStream;
+  late Stream<QuerySnapshot> _ordersStream;
+  Stream<DocumentSnapshot>? _userStream;
+  Stream<QuerySnapshot>? _cartStream;
+  late Stream<QuerySnapshot> _notificationsStream;
+
   String _selectedCategory = "Semua";
   String _searchQuery = "";
   bool _searchHasFocus = false;
@@ -61,12 +71,50 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _checkAndSeedData();
-    _loadWishlist();
+    _userChangesStream = FirebaseAuth.instance.userChanges();
+    _productsStream = FirebaseFirestore.instance
+        .collection('products')
+        .orderBy('createdAt', descending: true)
+        .limit(30)
+        .snapshots();
+    _ordersStream = FirebaseFirestore.instance
+        .collection('orders')
+        .where('status', isEqualTo: 'Completed')
+        .snapshots();
+    _notificationsStream = FirebaseFirestore.instance
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .snapshots();
+
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       _dbService.updateAchievements(uid);
+      _userStream = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots();
+      _cartStream = _dbService.getCartStream(uid);
     }
+    _checkAndSeedData();
+    _loadWishlist();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _searchQuery = query;
+        });
+      }
+    });
   }
 
   void _loadWishlist() {
@@ -118,21 +166,25 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.userChanges(),
+      stream: _userChangesStream,
       builder: (context, authSnapshot) {
         final user = authSnapshot.data;
         final String currentDisplayName = user?.displayName ?? 'Sobat ReUsea';
         final String? photoUrl = user?.photoURL;
         final String currentUserId = user?.uid ?? '';
 
+        if (currentUserId.isNotEmpty) {
+          _userStream ??= FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUserId)
+              .snapshots();
+          _cartStream ??= _dbService.getCartStream(currentUserId);
+        }
+
         return Scaffold(
           backgroundColor: AppTheme.bgLight,
           body: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('products')
-                .orderBy('createdAt', descending: true)
-                .limit(30)
-                .snapshots(),
+            stream: _productsStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -161,9 +213,18 @@ class _HomePageState extends State<HomePage> {
               // Filter by search
               if (_searchQuery.isNotEmpty) {
                 filteredDocs = filteredDocs.where((doc) {
-                  return doc['name'].toString().toLowerCase().contains(
-                    _searchQuery.toLowerCase(),
-                  );
+                  var data = doc.data() as Map<String, dynamic>;
+                  String name = (data['name'] ?? '').toString().toLowerCase();
+                  String category = (data['category'] ?? '').toString().toLowerCase();
+                  String description = (data['description'] ?? '').toString().toLowerCase();
+                  String sellerName = (data['sellerName'] ?? '').toString().toLowerCase();
+                  String sellerFaculty = (data['sellerFaculty'] ?? '').toString().toLowerCase();
+                  String query = _searchQuery.toLowerCase();
+                  return name.contains(query) ||
+                      category.contains(query) ||
+                      description.contains(query) ||
+                      sellerName.contains(query) ||
+                      sellerFaculty.contains(query);
                 }).toList();
               }
 
@@ -259,13 +320,64 @@ class _HomePageState extends State<HomePage> {
                       ),
                     )
                   else if (filteredProducts.isEmpty)
-                    const SliverToBoxAdapter(
+                    SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 30.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 60.0),
                         child: Center(
-                          child: Text(
-                            "Barang jualan tidak ditemukan.",
-                            style: TextStyle(color: AppTheme.secondaryBlue, fontWeight: FontWeight.bold),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                "🔍",
+                                style: TextStyle(fontSize: 48),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                "Produk tidak ditemukan",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.darkNavy,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                "Coba gunakan kata kunci lain.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.secondaryBlue,
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _searchController.clear();
+                                    _searchQuery = "";
+                                    _selectedCategory = "Semua";
+                                    _selectedFaculty = "Semua Fakultas";
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                ),
+                                child: const Text(
+                                  "Reset Pencarian",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -336,10 +448,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   // Notification Icon with unread badge
                   StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('notifications')
-                        .where('isRead', isEqualTo: false)
-                        .snapshots(),
+                    stream: _notificationsStream,
                     builder: (context, notifSnap) {
                       int unreadCount = 0;
                       if (notifSnap.hasData) {
@@ -392,7 +501,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 12),
                   // Shopping Cart Icon with dynamic badge
                   StreamBuilder<QuerySnapshot>(
-                    stream: _dbService.getCartStream(currentUserId),
+                    stream: _cartStream,
                     builder: (context, cartSnap) {
                       int itemCount = cartSnap.hasData ? cartSnap.data!.docs.length : 0;
                       return Stack(
@@ -505,10 +614,7 @@ class _HomePageState extends State<HomePage> {
 
           // IMPACT CARD (Glassmorphism, fully dynamic)
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('orders')
-                .where('status', isEqualTo: 'Completed')
-                .snapshots(),
+            stream: _ordersStream,
             builder: (context, orderSnapshot) {
               int barangReused = 0;
               int totalSavings = 0;
@@ -532,25 +638,72 @@ class _HomePageState extends State<HomePage> {
                     blur: 15,
                     opacity: 0.25,
                     border: Border.all(color: Colors.white24, width: 1.5),
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 18),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildImpactItem("♻", "$barangReused", "Barang Reused"),
+                        Expanded(
+                          child: _buildImpactItem(
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.recycling_rounded,
+                                color: Colors.greenAccent,
+                                size: 22,
+                              ),
+                            ),
+                            "$barangReused",
+                            "Barang Reused",
+                          ),
+                        ),
                         _buildImpactDivider(),
-                        _buildImpactItem("🌱", "$limbahBerkurang Kg", "Limbah Berkurang"),
+                        Expanded(
+                          child: _buildImpactItem(
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.eco_rounded,
+                                color: Colors.lightGreenAccent,
+                                size: 22,
+                              ),
+                            ),
+                            "$limbahBerkurang Kg",
+                            "Limbah Berkurang",
+                          ),
+                        ),
                         _buildImpactDivider(),
-                        _buildImpactItem("💰", formattedSavings, "Hemat Mahasiswa"),
+                        Expanded(
+                          child: _buildImpactItem(
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.savings_rounded,
+                                color: Colors.amberAccent,
+                                size: 22,
+                              ),
+                            ),
+                            formattedSavings,
+                            "Hemat Mahasiswa",
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 14),
                   // Achievement Saya row/glassmorphic item
                   StreamBuilder<DocumentSnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(currentUserId)
-                        .snapshots(),
+                    stream: _userStream,
                     builder: (context, userSnap) {
                       List<dynamic> unlockedIds = [];
                       if (userSnap.hasData && userSnap.data!.exists) {
@@ -652,18 +805,31 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildImpactItem(String emoji, String val, String sub) {
+  Widget _buildImpactItem(Widget icon, String val, String sub) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 22)),
-        const SizedBox(height: 4),
+        icon,
+        const SizedBox(height: 8),
         Text(
           val,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+          ),
         ),
+        const SizedBox(height: 2),
         Text(
           sub,
-          style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w600),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -679,45 +845,54 @@ class _HomePageState extends State<HomePage> {
 
   // WIDGET 2: FLOATING SEARCH BAR (Glass Effect)
   Widget _buildSearchBar() {
-    return Transform.translate(
-      offset: const Offset(0, -16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Focus(
-          onFocusChange: (hasFocus) {
-            setState(() {
-              _searchHasFocus = hasFocus;
-            });
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: _searchHasFocus 
-                  ? AppTheme.glowShadow(color: AppTheme.primaryBlue) 
-                  : AppTheme.softShadow(),
-              border: Border.all(
-                color: _searchHasFocus ? AppTheme.primaryBlue : Colors.white,
-                width: 1.5,
-              ),
+    return Padding(
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 20, bottom: 12),
+      child: Focus(
+        onFocusChange: (hasFocus) {
+          setState(() {
+            _searchHasFocus = hasFocus;
+          });
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: _searchHasFocus 
+                ? AppTheme.glowShadow(color: AppTheme.primaryBlue) 
+                : AppTheme.softShadow(),
+            border: Border.all(
+              color: _searchHasFocus ? AppTheme.primaryBlue : Colors.white,
+              width: 1.5,
             ),
-            child: TextField(
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.darkNavy),
-              decoration: InputDecoration(
-                hintText: 'Cari barang preloved...',
-                hintStyle: TextStyle(
-                  color: AppTheme.secondaryBlue.withValues(alpha: 0.5),
-                  fontWeight: FontWeight.w500,
-                ),
-                prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.secondaryBlue),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          ),
+          child: TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              _onSearchChanged(value);
+              setState(() {}); // Updates clear button visibility instantly
+            },
+            style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.darkNavy),
+            decoration: InputDecoration(
+              hintText: 'Cari barang preloved...',
+              hintStyle: TextStyle(
+                color: AppTheme.secondaryBlue.withValues(alpha: 0.5),
+                fontWeight: FontWeight.w500,
               ),
+              prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.secondaryBlue),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded, color: AppTheme.secondaryBlue),
+                      onPressed: () {
+                        _searchController.clear();
+                        if (_debounce?.isActive ?? false) _debounce!.cancel();
+                        setState(() {
+                          _searchQuery = "";
+                        });
+                      },
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
             ),
           ),
         ),

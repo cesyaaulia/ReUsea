@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:reusea/utils/theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ContactUsPage extends StatelessWidget {
   const ContactUsPage({super.key});
@@ -13,55 +14,56 @@ class ContactUsPage extends StatelessWidget {
     required Color bgIconColor,
     required VoidCallback onTap,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppTheme.softShadow(),
-        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: bgIconColor,
-              borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 18),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: AppTheme.softShadow(),
+          border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.03), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: bgIconColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.lexend(
-                    color: AppTheme.secondaryBlue,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.lexend(
+                      color: AppTheme.secondaryBlue,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: GoogleFonts.lexend(
-                    color: AppTheme.darkNavy,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: GoogleFonts.lexend(
+                      color: AppTheme.darkNavy,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: onTap,
-            icon: const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.lightBlueGrey, size: 18),
-          ),
-        ],
+            const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.lightBlueGrey, size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -153,31 +155,58 @@ class ContactUsPage extends StatelessWidget {
                   _buildContactCard(
                     icon: Icons.chat_outlined,
                     title: "WHATSAPP",
-                    value: "+62 812-3456-7890",
+                    value: "+62 818-0331-7261",
                     iconColor: Colors.green,
                     bgIconColor: Colors.green.withValues(alpha: 0.1),
-                    onTap: () {
-                      // WhatsApp Action
+                    onTap: () async {
+                      final Uri url = Uri.parse("https://wa.me/6281803317261");
+                      try {
+                        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                          await launchUrl(url, mode: LaunchMode.platformDefault);
+                        }
+                      } catch (_) {
+                        await launchUrl(url, mode: LaunchMode.platformDefault);
+                      }
                     },
                   ),
                   _buildContactCard(
                     icon: Icons.email_outlined,
                     title: "EMAIL RESMI",
-                    value: "support@reusea.app",
+                    value: "reuseasupport@gmail.com",
                     iconColor: Colors.blue,
                     bgIconColor: Colors.blue.withValues(alpha: 0.1),
-                    onTap: () {
-                      // Email Action
+                    onTap: () async {
+                      final Uri emailLaunchUri = Uri(
+                        scheme: 'mailto',
+                        path: 'reuseasupport@gmail.com',
+                        queryParameters: {
+                          'subject': 'Bantuan ReUsea',
+                        },
+                      );
+                      try {
+                        if (!await launchUrl(emailLaunchUri, mode: LaunchMode.externalApplication)) {
+                          await launchUrl(emailLaunchUri, mode: LaunchMode.platformDefault);
+                        }
+                      } catch (_) {
+                        await launchUrl(emailLaunchUri, mode: LaunchMode.platformDefault);
+                      }
                     },
                   ),
                   _buildContactCard(
                     icon: Icons.camera_alt_outlined,
                     title: "INSTAGRAM",
-                    value: "@reusea.unesa",
+                    value: "@reusea_unesa",
                     iconColor: AppTheme.sunsetOrange,
                     bgIconColor: AppTheme.sunsetOrange.withValues(alpha: 0.1),
-                    onTap: () {
-                      // Instagram Action
+                    onTap: () async {
+                      final Uri url = Uri.parse("https://www.instagram.com/reusea_unesa/");
+                      try {
+                        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                          await launchUrl(url, mode: LaunchMode.platformDefault);
+                        }
+                      } catch (_) {
+                        await launchUrl(url, mode: LaunchMode.platformDefault);
+                      }
                     },
                   ),
                   
