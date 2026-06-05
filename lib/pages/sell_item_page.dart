@@ -615,8 +615,8 @@ class _SellItemPageState extends State<SellItemPage> {
                             style: const TextStyle(fontSize: 13, color: AppTheme.darkNavy, fontWeight: FontWeight.bold),
                             decoration: const InputDecoration(
                               border: InputBorder.none,
-                              hintText: "Contoh: Kantin Fakultas Teknik, Starbucks Pakuwon, dll.",
-                              hintStyle: TextStyle(color: Colors.grey, fontSize: 12),
+                              hintText: "Contoh: Kantin Fakultas Teknik, Taman Bungkul, Royal Plaza, Kos Putri Ketintang, Starbucks Pakuwon, Depan Gedung D4 Manajemen Informatika",
+                              hintStyle: TextStyle(color: Colors.grey, fontSize: 11),
                               prefixIcon: Icon(Icons.edit_location_alt_rounded, color: AppTheme.primaryBlue, size: 18),
                               prefixIconConstraints: BoxConstraints(minWidth: 32),
                             ),
