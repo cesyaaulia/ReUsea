@@ -1082,6 +1082,47 @@ class _CheckoutPageState extends State<CheckoutPage>
             brandColor: AppTheme.primaryBlue,
             bgColor: const Color(0xFFE8EAF6),
           ),
+          if (_selectedService == 'cod' && widget.product.codPoint.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_rounded,
+                  color: AppTheme.primaryBlue,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.lexend(
+                        fontSize: 12,
+                        color: AppTheme.darkNavy,
+                      ),
+                      children: [
+                        const TextSpan(
+                          text: "Lokasi Pertemuan:\n",
+                          style: TextStyle(
+                            color: AppTheme.secondaryBlue,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextSpan(
+                          text: "📍 ${widget.product.codPoint}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

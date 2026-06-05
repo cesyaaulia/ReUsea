@@ -19,6 +19,7 @@ class _SellItemPageState extends State<SellItemPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _customCodPointController = TextEditingController();
 
   // =============================================
   // KATEGORI LENGKAP BAHASA INDONESIA
@@ -127,6 +128,7 @@ class _SellItemPageState extends State<SellItemPage> {
     _nameController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
+    _customCodPointController.dispose();
     super.dispose();
   }
 
@@ -184,6 +186,16 @@ class _SellItemPageState extends State<SellItemPage> {
       return;
     }
 
+    if (selectedCodPoint == "➕ Lainnya..." && _customCodPointController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Nama Lokasi COD wajib diisi jika memilih 'Lainnya...'!"),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
     if (_imageBytesList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -197,19 +209,28 @@ class _SellItemPageState extends State<SellItemPage> {
     setState(() => _isLoading = true);
     String currentUserId = _authService.currentUser?.uid ?? "anonymous_user";
 
+    String finalCodPoint = selectedCodPoint == "➕ Lainnya..."
+        ? _customCodPointController.text.trim()
+        : selectedCodPoint;
+    
+    String finalLocation = "$selectedCampus - $finalCodPoint";
+    String finalCrowdLevel = selectedCodPoint == "➕ Lainnya..."
+        ? "Sedang"
+        : (codPointCrowdLevels[selectedCodPoint] ?? "Sedang");
+
     await _dbService.uploadProduct(
       name: _nameController.text.trim(),
       price: selectedType == "Donasi" ? "Gratis" : _priceController.text.trim(),
       category: selectedCategory,
       description: _descriptionController.text.trim(),
-      location: selectedLocation,
+      location: finalLocation,
       sellerId: currentUserId,
       condition: selectedCondition,
       imageBytesList: _imageBytesList,
       productType: selectedType,
       campus: selectedCampus,
-      codPoint: selectedCodPoint,
-      codCrowdLevel: codPointCrowdLevels[selectedCodPoint] ?? "Sedang",
+      codPoint: finalCodPoint,
+      codCrowdLevel: finalCrowdLevel,
       status: status,
       onSuccess: () {
         setState(() => _isLoading = false);
@@ -515,6 +536,7 @@ class _SellItemPageState extends State<SellItemPage> {
                               selectedCampus = newValue!;
                               selectedCodPoint = campusCodPoints[selectedCampus]!.first;
                               selectedLocation = "$selectedCampus - $selectedCodPoint";
+                              _customCodPointController.clear();
                             });
                           },
                         ),
@@ -541,85 +563,139 @@ class _SellItemPageState extends State<SellItemPage> {
                             prefixIconConstraints: BoxConstraints(minWidth: 32),
                           ),
                           style: const TextStyle(fontSize: 13, color: AppTheme.darkNavy, fontWeight: FontWeight.bold),
-                          items: campusCodPoints[selectedCampus]!.map((String pt) {
-                            return DropdownMenuItem<String>(
-                              value: pt,
-                              child: Text(pt),
-                            );
-                          }).toList(),
+                          items: [
+                            ...campusCodPoints[selectedCampus]!.map((String pt) {
+                              return DropdownMenuItem<String>(
+                                value: pt,
+                                child: Text(pt),
+                              );
+                            }),
+                            const DropdownMenuItem<String>(
+                              value: "➕ Lainnya...",
+                              child: Text("➕ Lainnya..."),
+                            ),
+                          ],
                           onChanged: (String? newValue) {
                             setState(() {
                               selectedCodPoint = newValue!;
-                              selectedLocation = "$selectedCampus - $selectedCodPoint";
+                              if (selectedCodPoint != "➕ Lainnya...") {
+                                _customCodPointController.clear();
+                                selectedLocation = "$selectedCampus - $selectedCodPoint";
+                              } else {
+                                selectedLocation = "$selectedCampus - Custom";
+                              }
                             });
                           },
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          "Lokasi ini hanya sebagai rekomendasi awal. Detail tempat dan waktu pertemuan dapat didiskusikan lebih lanjut melalui chat.",
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppTheme.secondaryBlue.withValues(alpha: 0.6),
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+
+                      if (selectedCodPoint == "➕ Lainnya...") ...[
+                        const SizedBox(height: 16),
+                        _buildInputLabel("Nama Lokasi COD"),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.bgLight,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: TextField(
+                            controller: _customCodPointController,
+                            style: const TextStyle(fontSize: 13, color: AppTheme.darkNavy, fontWeight: FontWeight.bold),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              hintText: "Contoh: Kantin Fakultas Teknik, Starbucks Pakuwon, dll.",
+                              hintStyle: TextStyle(color: Colors.grey, fontSize: 12),
+                              prefixIcon: Icon(Icons.edit_location_alt_rounded, color: AppTheme.primaryBlue, size: 18),
+                              prefixIconConstraints: BoxConstraints(minWidth: 32),
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 16),
 
                       // Crowd Level & Safety Tips
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppTheme.primaryBlue.withValues(alpha: 0.08),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.people_rounded, size: 16, color: AppTheme.primaryBlue),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  "Estimasi Keramaian: ",
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: (codPointCrowdLevels[selectedCodPoint] == "Ramai"
-                                        ? Colors.redAccent.withValues(alpha: 0.1)
-                                        : (codPointCrowdLevels[selectedCodPoint] == "Sedang"
-                                            ? Colors.orangeAccent.withValues(alpha: 0.1)
-                                            : Colors.green.withValues(alpha: 0.1))),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    codPointCrowdLevels[selectedCodPoint] ?? "Sedang",
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: (codPointCrowdLevels[selectedCodPoint] == "Ramai"
-                                          ? Colors.redAccent
-                                          : (codPointCrowdLevels[selectedCodPoint] == "Sedang"
-                                              ? Colors.orangeAccent
-                                              : Colors.green)),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                      Builder(
+                        builder: (context) {
+                          final crowdLevel = selectedCodPoint == "➕ Lainnya..."
+                              ? "Sedang"
+                              : (codPointCrowdLevels[selectedCodPoint] ?? "Sedang");
+
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                                width: 1,
+                              ),
                             ),
-                            const SizedBox(height: 10),
-                            const Row(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.shield_outlined, size: 16, color: AppTheme.ecoTeal),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    "Tips Keamanan: Lakukan COD di tempat ramai, cek kondisi barang secara teliti sebelum membayar, dan utamakan area kampus.",
-                                    style: TextStyle(fontSize: 10, color: AppTheme.secondaryBlue, height: 1.4, fontWeight: FontWeight.w500),
-                                  ),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.people_rounded, size: 16, color: AppTheme.primaryBlue),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      "Estimasi Keramaian: ",
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.darkNavy),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: (crowdLevel == "Ramai"
+                                            ? Colors.redAccent.withValues(alpha: 0.1)
+                                            : (crowdLevel == "Sedang"
+                                                ? Colors.orangeAccent.withValues(alpha: 0.1)
+                                                : Colors.green.withValues(alpha: 0.1))),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        crowdLevel,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: (crowdLevel == "Ramai"
+                                              ? Colors.redAccent
+                                              : (crowdLevel == "Sedang"
+                                                  ? Colors.orangeAccent
+                                                  : Colors.green)),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                const Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.shield_outlined, size: 16, color: AppTheme.ecoTeal),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "Tips Keamanan: Lakukan COD di tempat ramai, cek kondisi barang secara teliti sebelum membayar, dan utamakan area kampus.",
+                                        style: TextStyle(fontSize: 10, color: AppTheme.secondaryBlue, height: 1.4, fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ],
                   ),
