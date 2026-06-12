@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:reusea/providers/cart_provider.dart';
+import 'package:reusea/providers/user_provider.dart';
 import 'package:reusea/pages/login_page.dart';
 import 'package:reusea/pages/main_navigation.dart';
 import 'package:reusea/pages/landing_page.dart';
@@ -21,7 +24,21 @@ void main() async {
   // Inisialisasi Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(const ReUseaApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProxyProvider<UserProvider, CartProvider>(
+          create: (_) => CartProvider(),
+          update: (_, userProvider, cartProvider) {
+            cartProvider!.listenToCart(userProvider.currentUser?.uid ?? "");
+            return cartProvider;
+          },
+        ),
+      ],
+      child: const ReUseaApp(),
+    ),
+  );
 }
 
 class ReUseaApp extends StatelessWidget {
@@ -33,8 +50,10 @@ class ReUseaApp extends StatelessWidget {
       title: 'ReUsea',
       initialRoute: '/', // Halaman pertama kali dibuka
       routes: {
-        '/login': (context) => const LoginPage(), // Daftarkan rute login di sini
-        '/landing': (context) => const LandingPage(), // Daftarkan rute landing page
+        '/login': (context) =>
+            const LoginPage(), // Daftarkan rute login di sini
+        '/landing': (context) =>
+            const LandingPage(), // Daftarkan rute landing page
       },
       debugShowCheckedModeBanner: false,
 
@@ -73,4 +92,3 @@ class ReUseaApp extends StatelessWidget {
     );
   }
 }
-
