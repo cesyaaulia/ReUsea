@@ -94,7 +94,9 @@ ReUsea/
 ** Active Eco-Commerce Marketplace Feed**
 
 Below is a visual layout preview of the ReUsea mobile ecosystem interface structure:
-<img width="1290" height="2796" alt="reusea netlify app_(iPhone 14 Pro Max) (18)" src="https://github.com/user-attachments/assets/68155d2d-4950-426b-a845-1a0257ecd295" />
+<div align="center">
+  <img width="30%" alt="ReUsea Mobile Interface Preview" src="https://github.com/user-attachments/assets/68155d2d-4950-426b-a845-1a0257ecd295" />
+</div>
 
 
 ## 🎓 Author
